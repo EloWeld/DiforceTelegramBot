@@ -1,15 +1,15 @@
 from etc.filters import AntiSpam
 from etc.keyboards import Keyboards
 from etc.m_user import User
-from loader import dp
+from loader import dp, bot
 
 from aiogram import Bot, types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Command
+from aiogram.dispatcher.filters import Command, CommandStart
 from aiogram.types import Message, ChatType, BotCommand
 
 
-@dp.message_handler(Command("/"), AntiSpam(), state="*")
+@dp.message_handler(CommandStart(), AntiSpam(), state="*")
 async def _(m: Message, command: Command.CommandObj, state: FSMContext):
     if state:
         await state.finish()
@@ -29,6 +29,6 @@ async def _(m: Message, command: Command.CommandObj, state: FSMContext):
 
     await m.answer("🚀 Добро пожаловать в Diforce!", reply_markup=Keyboards.MainMenu(user))
 
-    await Bot.set_my_commands([
+    await bot.set_my_commands([
         BotCommand("start", "Перезагрузить бота")
     ])

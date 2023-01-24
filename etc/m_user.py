@@ -31,7 +31,7 @@ class User:
 
     @classmethod
     def Get(cls, user: SMC, condition: dict = None):
-        from helpers import RDotDict
+        from etc.helpers import RDotDict
         condition = condition if condition else dict(TGID=User.GoodUser(user))
         r = MDB.Users.find_one(condition)
         return RDotDict(r) if r else None
@@ -47,12 +47,12 @@ class User:
 
     @classmethod
     def All(cls):
-        from helpers import RDotDict
+        from etc.helpers import RDotDict
         return [RDotDict(x) for x in MDB.Users.find()]
 
     @classmethod
     def Admins(cls):
-        from helpers import RDotDict
+        from etc.helpers import RDotDict
         admins = [RDotDict(x) for x in MDB.Users.find(dict(Role="ADMIN"))]
         return admins
 
