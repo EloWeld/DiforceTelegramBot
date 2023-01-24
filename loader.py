@@ -22,8 +22,10 @@ if platform.system() == "Windows":
     # Initializating V83 for connect to 1C
     V83_CONN_STRING = f"Srvr={os.environ['1C_Host']};" \
                         f"Ref={os.environ['1C_DatabaseName']};" \
-                        f"Usr{os.environ['1C_Username']};" \
+                        f"Usr={os.environ['1C_Username']};" \
                         f"Pwd={os.environ['1C_Password']};"
+    logger.info(f"Initialize COM with creds: {V83_CONN_STRING}")
+
 
     pythoncom.CoInitialize()
     V83 = win32com.client.Dispatch("V83.COMConnector").Connect(V83_CONN_STRING)
