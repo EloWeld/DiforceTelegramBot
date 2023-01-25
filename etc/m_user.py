@@ -5,6 +5,8 @@ from loader import MDB
 from dotdict import dotdict
 from aiogram import types
 
+from models.user import UserModel
+
 
 SMC = Union[dict, int, str, types.Message, types.CallbackQuery]
 
@@ -12,29 +14,26 @@ SMC = Union[dict, int, str, types.Message, types.CallbackQuery]
 class User:
     @classmethod
     def Create(cls, user: types.User):
-        u = dotdict(
-            TGID=user.id,
-            Username=user.username,
-            Fullname=user.full_name,
-            Role="USER",
-            Inviter=0,
-            Invites=[],
-            Balance=0.0,
-            Cart={},
-            Settings=dict(currency="RUB",
-                            delivery="AIRPLANE",
-                            insurance=True),
-            CreatedAt=datetime.datetime.now()
+        u = UserModel(
+            tgid=user.id,
+            username=user.username,
+            fullname=user.full_name,
+            is_admin=False,
+            balance=0.0,
+            cart={},
+            created_at=datetime.datetime.now()
         )
         loguru.logger.success(f"[ USER ]: Added new user, ID: {u.TGID}; Username: @{u.Username}")
-        return MDB.Users.insert_one(u)
+        return MDB.Users.insert_one(u.__dict__)
 
     @classmethod
     def Get(cls, user: SMC, condition: dict = None):
         from etc.helpers import RDotDict
         condition = condition if condition else dict(TGID=User.GoodUser(user))
-        r = MDB.Users.find_one(condition)
-        return RDotDict(r) if r else None
+        pr = MDB.Users.find_one(condition)
+        r = UserModel(*list(pr.values())[1:])
+        print(r.__dict__)
+        return r if r else None
 
     @classmethod
     def Update(cls, user: SMC, changes=None):

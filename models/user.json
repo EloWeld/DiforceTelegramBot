@@ -1,0 +1,10 @@
+
+{
+    "TGID":10000,
+    "IsAdmin":false,
+    "Username":"UserModel",
+    "Fullname":"Ivan Ivan Ivan",
+    "Balance":0,
+    "Cart":[],
+    "CreatedAt":"20.20.2017"
+}
