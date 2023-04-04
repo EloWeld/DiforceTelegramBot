@@ -1,9 +1,10 @@
+from typing import Union
 from dotdict import dotdict
 from datetime import datetime, timedelta
 
 import loguru
 from aiogram.dispatcher.filters import BoundFilter
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 
 usersMsgData = dotdict()
 banTime = 5
@@ -11,6 +12,13 @@ allowedTime = 1
 spamBufferSize = 3
 
 
+class Admin(BoundFilter):
+    async def check(self, m: Union[Message, CallbackQuery]) -> bool:
+        user_id = m.from_user.id
+        from services.userService import UserService
+        user = UserService.Get(user_id)
+        return user and (user.is_admin or 'admin' in user.roles)
+    
 class AntiSpam(BoundFilter):
     async def check(self, m: Message) -> bool:
         user = m.from_user.id

@@ -1,11 +1,10 @@
-from aiogram.utils import executor
-from loader import *
+import subprocess
+import sys
 
-from handlers import *
-
-
-def main():
-    executor.start_polling(dp, on_startup=onBotStartup())
 
 if __name__ == "__main__":
-    main()
+    BotMain = subprocess.Popen([sys.executable, "appBot.py"], shell=False)
+    Scheduler = subprocess.Popen(
+        [sys.executable, "appSchedule.py"], shell=False)
+    BotMain.communicate()
+    Scheduler.communicate()
