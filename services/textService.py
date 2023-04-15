@@ -14,6 +14,7 @@ class TextsMetaClass(type):
         CartButton="🛒 Моя корзина",
         OptPricesFileButton="Для оптовиков",
         OptFileMessage="Для оптовиков вот файл",
+        AuthButton="Войти",
         # Catalog
         CatalogMessage="🛍️ Каталог товаров",
         CategoryMessage="️️⏺️ Категория {category.GroupName}\n"
@@ -116,6 +117,9 @@ class TextsMetaClass(type):
         Cancel="❌ Отменить",
         HideButton="➖Скрыть➖",
         BackButton="◀️ Назад",
+        
+        # Identification
+        PleaseFillForm="Пожалуйста заполните форму для идентификации. Вводите те же данные что и на сайте.",
     )
     
     def rus(cls, key):

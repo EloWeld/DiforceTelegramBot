@@ -34,7 +34,7 @@ class OneServiceBase:
     def __init__(self) -> None:
         self.base_endpoint = Consts.OneServiceEndpoint
         self.session = requests.Session()
-        self.session.auth = ("tgbot", "123456")
+        self.session.auth = (Consts.OneServiceLogin, Consts.OneServicePassword)
 
     def getCatalog(self, group_id=None, with_image=False):
         try:
@@ -44,6 +44,9 @@ class OneServiceBase:
             }, timeout=REQUESTS_TIMEOUT*10 if group_id else 99999)
 
             if r.status_code != 200:
+                loguru.logger.error(
+                    f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
+            if 'Ошибка' in r.text:
                 loguru.logger.error(
                     f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
             data = r.json()
@@ -127,6 +130,33 @@ class OneServiceBase:
         if images == [""]:
             return []
         return images
+    
+    def GetUsersByParams(self, data):
+        params =dict(
+            FullName=data['full_name']
+        )
+        if 'email' in data:
+            params['Email'] = data['email']
+        if 'phone' in data:
+            params['Phone'] = data['phone']
+        if 'inn+kpp' in data:
+            params['INN'] = data['inn+kpp'].split('+')[0]
+        if 'inn+kpp' in data and len(data['inn+kpp'].split('+')) > 1:
+            params['KPP'] = data['inn+kpp'].split('+')[1]
+
+        print("-" * 20)
+        print(data)
+        
+        r = self.session.get(self.base_endpoint+"getUsersByParams", params=params, 
+                             timeout=REQUESTS_TIMEOUT)
+
+        if r.status_code != 200:
+            loguru.logger.error(
+                f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
+            
+        rdata = r.json()
+        return rdata
+
 
 
 OneService = OneServiceBase()

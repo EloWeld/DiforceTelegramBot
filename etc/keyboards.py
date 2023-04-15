@@ -26,6 +26,8 @@ class Keyboards:
         k.row(Texts.Profile)
         if user and (user.is_admin or 'admin' in user.roles):
             k.row(Texts.AdminMenuButton)
+        if user and (not user.is_authenticated):
+            k.row(Texts.AuthButton)
         #k.row(Texts.OptPricesFileButton)
         return k
 

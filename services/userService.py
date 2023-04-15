@@ -18,6 +18,7 @@ class UserService:
             username=user.username,
             fullname=user.full_name,
             is_admin=False,
+            is_authenticated=False,
             opt=None,
             roles=["user"],
             balance=0.0,
