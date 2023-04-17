@@ -78,4 +78,6 @@ async def show_personal_cabinet(m: Message, state: FSMContext):
     user = UserService.Get(user_id)
     orders = OrderService.GetOrdersByUserId(user_id)
     text = f"Личный кабинет пользователя {user.fullname}\n"
+    if user.is_authenticated:
+        text += "\n<b>✅ Вход выполнен ✅</b>\n"
     await m.answer(text=text, reply_markup=Keyboards.Profile(orders))

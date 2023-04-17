@@ -122,7 +122,7 @@ async def _(c: CallbackQuery, state: FSMContext):
                                                                     goods_count=len(goods)),
                                   reply_markup=Keyboards.categoryGoods(cat, goods))
         except aiogram.utils.exceptions.BadRequest as e:
-            await c.answer("Слишком много товаров! Пожалуйста выберите более конкретные категории")
+            await c.answer(Texts.TooManyGoodsException)
     if action == "see_good":
         goodID = c.data.split(":")[2]
         good, images = GoodsService.GetGoodByID(goodID, with_images=True)
@@ -174,12 +174,52 @@ async def _(c: CallbackQuery, state: FSMContext):
         await state.set_state("search")
         await state.update_data(category_id=category_id, msg_id=msg.message_id)
         
+    if action == "price_filter": 
+        category_group_id = goodID = c.data.split(":")[2]
+        await c.message.answer(Texts.PriceFilterMessage, reply_markup=Keyboards.PriceFilterMessage())  
+        await state.set_state("PriceFilterState")
+        await state.update_data(category_group_id=category_group_id)
+    if action == "cancel_filter":
+        await state.finish()
+        await c.answer()
+        await c.message.delete()
     if action == "main":
         categories = GoodsService.GetCategoriesTree()
 
         await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
 
 
+@dp.message_handler(state="price_filter")
+async def _(m: Message, state: FSMContext):
+    stateData = await state.get_data()
+    user = UserService.Get(m.from_user.id)
+    
+    try:
+        min_price = float(m.text.replace('-', ' ').split(' ')[0])
+        max_price = float(m.text.replace('-', ' ').split(' ')[1])
+        await state.update_data(min_price=min_price, max_price=max_price)
+        await m.answer(Texts.RangeSetted)
+        # See goods
+        catID = stateData.category_group_id
+
+        loguru.logger.info(f"See catalog goods for category {catID}")
+
+        cat = GoodsService.GetCategoryByID(catID)
+        goods = OneService.getCatalog(group_id=cat['GroupID'])
+        goods = [x for x in goods if min_price <= x['Price'] <= max_price]
+        category_goods_count = len(goods)
+
+        try:
+            await m.answer(Texts.CategoryGoodsMessage.format(category=cat,
+                                                                    goods_count=len(goods)),
+                                  reply_markup=Keyboards.categoryGoods(cat, goods))
+        except aiogram.utils.exceptions.BadRequest as e:
+            await m.answer(Texts.TooManyGoodsException)
+    except Exception as e:
+        await m.answer(Texts.InvalidRange)
+        return
+    
+    
 @dp.message_handler(state="search")
 async def _(m: Message, state: FSMContext):
     stateData = await state.get_data()

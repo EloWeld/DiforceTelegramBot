@@ -10,6 +10,7 @@ from loader import MDB, REQUESTS_TIMEOUT, Consts
 def adaptGood(good: dict, goodEntities: List[dict] = None):
     from services.goodsService import GoodsService
     from etc.helpers import rdotdict
+    
     good['UpdateTime'] = datetime.datetime.now()
     good['Price'] = good['Price000000005']
     good['ProductArt'] = good['ProductART']
@@ -85,8 +86,7 @@ class OneServiceBase:
     def getCatalogTree(self):
         try:
 
-            r = self.session.get(self.base_endpoint +
-                                 "getCatalogTree", timeout=REQUESTS_TIMEOUT)
+            r = self.session.get(self.base_endpoint + "getCatalogTree", timeout=REQUESTS_TIMEOUT)
             if r.status_code != 200:
                 loguru.logger.error(
                     f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")

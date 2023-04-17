@@ -10,7 +10,6 @@ from services.textService import Texts
 
 
 class Keyboards:
-    
     @staticmethod
     def SearchQuery():
         k = IKeyboard(resize_keyboard=True)
@@ -81,6 +80,9 @@ class Keyboards:
             k.row(IButton(Texts.CategoryGoodsButton,
                   callback_data=f"|Catalog:see_cat_goods:{category['GroupID']}"))
         # Back button
+        k.row(IButton(Texts.PriceFilter,
+                      callback_data=f"|Catalog:price_filter:{category['GroupID']}"))
+        # Back button
         k.row(IButton(Texts.BackButton,
                       callback_data=f"|Catalog:main"))
         return k
@@ -110,6 +112,12 @@ class Keyboards:
         if group_id:
             k.row(IButton(Texts.BackButton,
                         callback_data=f"|Catalog:see_cat:{group_id}"))
+        return k
+    
+    @staticmethod
+    def PriceFilterMessage():
+        k = IKeyboard(row_width=1)
+        k.row(IButton(Texts.Cancel, callback_data="|Catalog:cancel_filter"))
         return k
         
 
