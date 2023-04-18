@@ -8,10 +8,18 @@
             "name": "Python: main",
             "type": "python",
             "request": "launch",
-            "args": ["-Xfrozen_modules=off"],
             "program": "main.py",
             "console": "integratedTerminal",
-            "stopOnEntry": true
+            "justMyCode": true,
+            "pythonArgs": ["-Xfrozen_modules=off"]
+            }, {
+            "name": "Python: Bot",
+            "type": "python",
+            "request": "launch",
+            "program": "appBot.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "pythonArgs": ["-Xfrozen_modules=off"]
         }
     ]
 }
