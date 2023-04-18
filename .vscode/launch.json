@@ -8,25 +8,10 @@
             "name": "Python: main",
             "type": "python",
             "request": "launch",
+            "args": ["-Xfrozen_modules=off"],
             "program": "main.py",
             "console": "integratedTerminal",
             "stopOnEntry": true
-        },
-        {
-            "name": "JsonToModel",
-            "type": "python",
-            "request": "launch",
-            "module": "json_to_models.__main__",
-            "console": "integratedTerminal",
-            "args": [
-                "-m",
-                "${selectedText}",
-                "${workspaceFolder}/${relativeFileDirname}/${fileBasename}",
-                "-f",
-                "attrs",
-                ">",
-                "${workspaceFolder}/${relativeFileDirname}/${fileBasenameNoExtension}.py",
-             ]
         }
     ]
 }
