@@ -4,7 +4,7 @@ from aiogram.dispatcher.filters import Text, ChatTypeFilter
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from etc.filters import AntiSpam
 from etc.keyboards import Keyboards
-from loader import dp
+from loader import MDB, dp
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from services.goodsService import GoodsService
@@ -66,18 +66,43 @@ async def process_full_name(message: types.Message, state: FSMContext):
 @dp.message_handler(state=Form.inn)
 async def process_inn(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
+        user = UserService.Get(message.from_user.id)
         if message.text != "0" and message.text.strip().isdigit():
-            data['inn'] = message.text
+            data['inn+kpp'] = message.text
+            
         # ищем информацию в базе данных
-        sameUsers = OneService.GetUsersByParams(data)
-    
+        d_users = MDB.DiforceUsers.find()
+        sameUsers = []
+        for d_user in d_users:
+            cond = True
+            if 'inn+kpp' in data and 'INN' in d_user:
+                cond = cond and data['inn+kpp'].split('+')[0] == d_user['INN']
+            if 'full_name' in data and 'FullName' in d_user:
+                cond = cond and data['full_name'].lower().replace('.', '') == d_user['FullName'].lower().replace('.', '')
+            if 'phone' in data and 'Phone' in d_user:
+                cond = cond and data['phone'].replace(' ', '') == d_user['Phone'].replace(' ', '')
+            if 'email' in data and 'Email' in d_user:
+                cond = cond and data['email'].replace(' ', '') == d_user['Email'].replace(' ', '')
+                
+            if cond:
+                sameUsers.append(d_user)
+                
+                
+        t = "Спасибо! Вы заполнили анкету. Вот ваши данные:\n\n" \
+                            f"Номер телефона/email: {data['phone'] if 'phone' in data else data['email'] if 'email' in data else '?'}\n" \
+                            f"Полное наименование: {data['full_name']}\n"
+        if 'inn+kpp' in data:
+            t += f"ИНН+КПП организации: {data['inn+kpp']}\n"
+            
+        await message.answer(t)
         if len(sameUsers) == 1:
             print(sameUsers)
-            await message.answer(f"Спасибо! Вы идентифицированы!")
             user = UserService.Get(message)
             user['is_authenticated'] = True
-            user['identification_data'] = data
+            user['identification_data'] = dict(data)
             user['diforce_data'] = sameUsers[0]
+            
+            await message.answer(f"✅ Спасибо! Вы идентифицированы!", reply_markup=Keyboards.startMenu(user))
             
             if user['diforce_data']['ContractType'] == "МЕЛКООПТОВААЯ":
                 user['roles'] = list(set(user['roles']+["SmallOpt"]))
@@ -91,10 +116,6 @@ async def process_inn(message: types.Message, state: FSMContext):
             
             UserService.Update(user)
         else:
-            await message.answer("Вы не идентифицированы. Видимо вы ввели неверные данные либо пользователей с такими данными несколько")
+            await message.answer("❌ Вы не идентифицированы. Видимо вы ввели неверные данные либо пользователей с такими данными несколько", reply_markup=Keyboards.startMenu(user))
         # завершаем состояние FSM и сохраняем данные в базе
         await state.finish()
-        await message.answer("Спасибо! Вы заполнили анкету. Вот ваши данные:\n\n"
-                            f"Номер телефона/email: {data['phone_email']}\n"
-                            f"Полное наименование организации: {data['full_name']}\n"
-                            f"ИНН организации: {data['inn']}\n")

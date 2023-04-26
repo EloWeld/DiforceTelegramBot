@@ -1,6 +1,10 @@
+import datetime
+import traceback
 from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.dispatcher.filters import Text
+import loguru
+from etc.helpers import rdotdict
 from etc.keyboards import Keyboards
 from services.goodsService import GoodsService
 from services.oneService import OneService
@@ -14,7 +18,8 @@ from loader import dp
 async def order_info(call: CallbackQuery):
     order_id = call.data.split(':')[1]
     order = OrderService.Get(order_id)
-
+    await call.message.answer("В разработке")
+    return
     order_text = f"Заказ №{order.id}\n" \
                  f"Дата заказа: {order.date}\n" \
                  f"Сумма: {order.total}\n" \
@@ -63,7 +68,18 @@ async def edit_order(order_id, user_id):
 async def order_info(c: CallbackQuery):
     user_id = c.from_user.id
     user = UserService.Get(user_id)
-    orders = OrderService.GetOrdersByUserId(user_id)
+    orders = []
+    try:
+        orders = OneService.GetOrdersByUser(user)
+        orders = [rdotdict(dict(
+            id=x['OrderID'].split(' ')[2],
+            user_id=user.id,
+            items=[],
+            created_at=datetime.datetime.strptime(x['OrderID'].split('от ')[1], '%d.%m.%Y %H:%M:%S')
+            )) for x in orders]
+    except Exception as e:
+        orders = OrderService.GetOrdersByUserId(user_id)
+        loguru.logger.error(f"Error getting orders: {e}; traceback: {traceback.format_exc()}")
     if not orders:
         await c.answer(Texts.YourOrdersHistoryIsEmpty, show_alert=True)
         return

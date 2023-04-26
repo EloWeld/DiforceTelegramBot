@@ -91,7 +91,9 @@ class UserService:
 
         if good['ProductID'] not in user.cart:
             user.cart[good['ProductID']] = dict(
-                ProductID=good['ProductID'], ProductName=good['ProductName'], Quantity=0)
+                ProductID=good['ProductID'], 
+                ProductName=good['ProductName'], 
+                Quantity=0)
 
         # Add one quantity to the cart
         user.cart[good['ProductID']]['Quantity'] += 1

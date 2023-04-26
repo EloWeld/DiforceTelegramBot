@@ -232,3 +232,11 @@ class Keyboards:
         k.row(IButton("Назначить админом", callback_data=f"operate_user:set_admin:{user.id}"))
         return k
     
+    @staticmethod
+    def ChooseStore(stores: dict):
+        k = IKeyboard()
+        for store in list(stores.values()):
+            k.row(IButton(store['store_name'], callback_data=f"|Cart:make_an_order_store:{store['store_id']}"))
+            
+        k.row(IButton(Texts.BackButton, callback_data=f"|Cart:back"))
+        return k

@@ -2,6 +2,7 @@ import loguru
 from loader import MDB
 from dotdict import dotdict
 from etc.helpers import rdotdict
+from services.oneService import OneService
 
 class OrderService:
     @classmethod

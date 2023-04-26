@@ -50,24 +50,28 @@ async def _(c: CallbackQuery, state: FSMContext):
     user = UserService.Get(c)
 
     if action == "add_to_cart":
+        await c.answer()
         goodID = c.data.split(":")[2]
         good = GoodsService.GetGoodByID(goodID)
         UserService.AddToCart(user.id, good)
         await c.message.answer(Texts.AddedToCart, reply_markup=Keyboards.startMenu(user))
 
     if action == "found_cheaper":
+        await c.answer()
         goodID = c.data.split(":")[2]
         await state.set_state("FoundItCheaper")
         ans_msg = await c.message.answer(Texts.FoundCheaperMessage, reply_markup=Keyboards.foundCheaperMenu())
         await state.update_data(goodID=goodID, msgID=ans_msg.message_id)
 
     if action == "store_quants":
+        await c.answer()
         goodID = c.data.split(":")[2]
         store_text = '\n'.join(Texts.QuantityInStoresFormat.format(
             **x) for x in GoodsService.GetGoodByID(goodID)['QuantityInStores'])
         await c.message.answer(Texts.QuantityInStores.format(store_text=store_text))
 
     if action == "hide":
+        await c.answer()
         mid = c.data.split(":")[2]
         if mid != "None" and mid in message_id_links:
             for x in message_id_links[mid]:
@@ -94,7 +98,7 @@ async def _(c: CallbackQuery, state: FSMContext):
             await c.message.answer(f"А вот оказывается тут баг и категории {catID} не существует")
             return
         subcategories_count = len(cat['Subgroups'])
-        goods = OneService.getCatalog(group_id=cat['GroupID'])
+        goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
         category_goods_count = len(goods)
 
         # If category contains subcategories - throw another keyboard
@@ -114,7 +118,7 @@ async def _(c: CallbackQuery, state: FSMContext):
         loguru.logger.info(f"See catalog goods for category {catID}")
 
         cat = GoodsService.GetCategoryByID(catID)
-        goods = OneService.getCatalog(group_id=cat['GroupID'])
+        goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
         category_goods_count = len(goods)
 
         try:
@@ -205,8 +209,9 @@ async def _(m: Message, state: FSMContext):
         loguru.logger.info(f"See catalog goods for category {catID}")
 
         cat = GoodsService.GetCategoryByID(catID)
-        goods = OneService.getCatalog(group_id=cat['GroupID'])
-        goods = [x for x in goods if min_price <= x['Price'] <= max_price]
+        goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
+        pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
+        goods = [x for x in goods if min_price <= x[pr] <= max_price]
         category_goods_count = len(goods)
 
         try:

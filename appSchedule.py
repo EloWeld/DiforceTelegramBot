@@ -1,5 +1,7 @@
 import asyncio
+from threading import Thread
 import time
+import traceback
 import loguru
 from loader import MDB, bot
 from dotdict import dotdict
@@ -21,16 +23,6 @@ FORBIDDEN_GROUP_IDS = [
     "DI000007050",
 ]
 
-
-def catalogTreeSyncWrapper():
-    loguru.logger.info("Starting catalogSyncWrapper")
-    asyncio.run(catalogTreeSync())
-
-
-def catalogGoodsSyncWrapper():
-    loguru.logger.info("Starting catalogSyncWrapper")
-    asyncio.run(catalogGoodsSync())
-
 def fillCatalog(catalog, data, head):
     for xCategory in data:
         if xCategory['GroupID'] in FORBIDDEN_GROUP_IDS:
@@ -42,6 +34,7 @@ def fillCatalog(catalog, data, head):
 
 
 async def catalogTreeSync():
+    loguru.logger.info(f"[CATALOG]: Start sync tree")
     startTime = time.time()
     data = OneService.getCatalogTree()
     data.sort(key=lambda x: x['HeadGroupID'])
@@ -61,17 +54,40 @@ async def catalogGoodsSync():
     loguru.logger.info(f"[CATALOG]: Start sync catalog")
     startTime = time.time()
     data = OneService.getCatalog(with_image=False)
-    MDB.Goods.delete_many(dict())
+    MDB.Goods.delete_many({})
     loguru.logger.info(f"[CATALOG]: All goods was deleted")
     for x in data:
         MDB.Goods.insert_one(x)
     loguru.logger.success(f"[CATALOG]: Catalogs has been updated successfully within {time.time() - startTime} seconds")
 
-schedule.every(2).minutes.at(":37").do(catalogTreeSyncWrapper)
-schedule.every(10).minutes.at(":37").do(catalogGoodsSyncWrapper)
+async def diforceUsersSync():
+    loguru.logger.info("[DIFORCE-USERS]: Start sync users")
+    try:
+        users = OneService.getUsers()
+        MDB.DiforceUsers.delete_many({})
+        for x in users:
+            MDB.DiforceUsers.insert_one(x)
+    except Exception as e:
+        loguru.logger.error(f"[DIFORCE-USERS]: Can't sync diforce users!: {e}; traceback: {traceback.format_exc()}")
+    loguru.logger.info(f"[CATALOG]: Users synced")
+    
+    
+def diforceUsersSyncWrapper():
+    while True:
+        asyncio.run(diforceUsersSync())
+        time.sleep(2000)
+        
+
+th1 = Thread(target=diforceUsersSyncWrapper, name="Sync users from diforce thread")
+th1.start()
+schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogTreeSync()))
+schedule.every(10).minutes.at(":37").do(lambda: asyncio.run(catalogGoodsSync()))
+
 loguru.logger.info("Starting scheduler")
-catalogTreeSyncWrapper()
-catalogGoodsSyncWrapper()
+
+asyncio.run(catalogTreeSync())
+asyncio.run(catalogGoodsSync())
+
 
 while True:
     schedule.run_pending()

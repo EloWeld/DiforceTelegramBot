@@ -2,6 +2,7 @@ import datetime
 from typing import List
 import loguru
 import requests
+import urllib.parse
 from etc.helpers import rdotdict
 
 from loader import MDB, REQUESTS_TIMEOUT, Consts
@@ -36,6 +37,21 @@ class OneServiceBase:
         self.base_endpoint = Consts.OneServiceEndpoint
         self.session = requests.Session()
         self.session.auth = (Consts.OneServiceLogin, Consts.OneServicePassword)
+        
+    def GetOrdersByUser(self, user):
+        r = self.session.get(self.base_endpoint+"getOrdersHistory", params=dict(ClientID=user['diforce_data']['ID']))
+        if r.status_code != 200:
+            loguru.logger.error(
+                f"Can't get orders history; Response: {r.text}, Status: {r.status_code}")
+        return r.json()
+    
+    def GetAllOrders(self):
+        r = self.session.get(self.base_endpoint+"getOrdersHistory")
+        if r.status_code != 200:
+            loguru.logger.error(
+                f"Can't get orders history; Response: {r.text}, Status: {r.status_code}")
+        return r.json()
+        
 
     def getCatalog(self, group_id=None, with_image=False):
         try:
@@ -55,8 +71,8 @@ class OneServiceBase:
             data = [adaptGood(
                 x, [y for y in data if y['ProductID'] == x['ProductID']]) for x in data]
             data = list({x['ProductID']: x for x in data}.values())
-        except requests.exceptions.Timeout:
-            print("Превышено время ожидания")
+        except Exception as e:
+            print(f"Error get catalog: {e}")
             # Обработка ошибки таймаута
             data = [rdotdict(x) for x in MDB.Goods.find()]
         return data
@@ -112,7 +128,7 @@ class OneServiceBase:
         return r.json()
 
     def getGoodImages(self, good_id):
-        r = self.session.get(self.base_endpoint + "GetProductImage", params={
+        r = self.session.get(self.base_endpoint + "getProductImages", params={
             "ProductID": good_id,
         })
 
@@ -131,9 +147,30 @@ class OneServiceBase:
             return []
         return images
     
+    def CreateOrder(self, user, storeID) -> bool:
+        r = self.session.post(self.base_endpoint + "CreateOrder", timeout=REQUESTS_TIMEOUT,
+                              json={
+                                  "ClientID": user['diforce_data']['ID'],
+                                  "StoreID": storeID,
+                                  "Products": [
+                                      {
+                                          "ProductID": cartItem['ProductID'],
+                                          "Quantity": cartItem['Quantity'],
+                                          "Price": cartItem['Price'],
+                                          "Sum": cartItem['Price'] * cartItem['Quantity']
+                                      } for cartItem in list(user['cart'].values())
+                                  ]
+                              })
+        if r.status_code != 200:
+            loguru.logger.error(
+                f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
+            return False
+        return True
+            
+    
     def GetUsersByParams(self, data):
         params =dict(
-            FullName=data['full_name']
+            FullName=data['full_name'],
         )
         if 'email' in data:
             params['Email'] = data['email']
@@ -145,9 +182,10 @@ class OneServiceBase:
             params['KPP'] = data['inn+kpp'].split('+')[1]
 
         print("-" * 20)
-        print(data)
+        print(data, params)
+        params = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
         
-        r = self.session.get(self.base_endpoint+"getUsersByParams", params=params, 
+        r = self.session.get(self.base_endpoint+"getUsersByParams", params=params,
                              timeout=REQUESTS_TIMEOUT)
 
         if r.status_code != 200:

@@ -1,4 +1,5 @@
 from loader import MDB, bot
+from services.textService import Texts
 from services.userService import UserService
 
 
@@ -23,3 +24,9 @@ def prepareUserToPrint(xUser):
     xUser.roles = ', '.join([Texts.rus(x) for x in xUser.roles])
     xUser.opt = Texts.rus(xUser.opt)
     return xUser
+
+def cutText(text: str, limit: int):
+    if len(text) > limit:
+        return text[:limit-3] + "..."
+    else:
+        return text

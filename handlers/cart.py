@@ -1,5 +1,7 @@
 import asyncio
 import base64
+import datetime
+from uuid import uuid4
 from dotdict import dotdict
 
 import loguru
@@ -10,11 +12,12 @@ from aiogram.types import Message, ChatType, BotCommand, CallbackQuery, ContentT
 
 from etc.filters import AntiSpam
 from etc.keyboards import Keyboards
-from loader import dp, bot, Consts
+from loader import MDB, dp, bot, Consts
 from services.goodsService import GoodsService
 from services.oneService import OneService
 from services.textService import Texts
 from services.userService import UserService
+from utils import cutText
 
 
 def prepareCartItemToSend(good, cartItem):
@@ -46,8 +49,12 @@ async def showCart(user):
         return
     for cartItemID in user['cart']:
         cartItems += [dotdict(user['cart'][cartItemID])]
-        good = GoodsService.GetGoodByID(cartItems[-1].ProductID)
-        cart_price += GoodsService.GetTargetPrice(user, good) * cartItems[-1].Quantity
+        good = MDB.Goods.find_one(dict(ProductID=cartItems[-1].ProductID))
+        x = GoodsService.GetTargetPrice(user, good)
+        if not x:
+            cartItems = cartItems[:-1]
+            continue
+        cart_price += x * cartItems[-1].Quantity
 
     cartText = '\n'.join(Texts.CartItemTextFormat.format(**x)
                          for x in cartItems)
@@ -105,8 +112,88 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
     if action == "hide":
         await c.message.delete()
+    if action == "make_an_order_store":
+        storeID = c.data.split(':')[2]
+        
+        for cartItem in list(user['cart'].values()):
+            good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
+            if good:
+                cartItem['Price'] = GoodsService.GetTargetPrice(user, good)
+        
+        success_order = OneService.CreateOrder(user, storeID)
+        if success_order:
+            MDB.Orders.insert_one(dict(
+                id=str(uuid4()),
+                user_id=user.id,
+                store_id=storeID,
+                created_at=datetime.datetime.now(),
+                items=user['cart']
+            ))
+            user['cart'] = {}
+            UserService.Update(user)
+            
+            await c.message.answer("✅ Заказ сделан!")
+        else:
+            await c.message.answer("❌ Не удалось создать заказ!")
     if action == "make_an_order":
-        await c.message.answer("Заказ сделан")
+        goods = []
+        for cartItem in list(user['cart'].values()):
+            good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
+            if good:
+                cartItem['Price'] = GoodsService.GetTargetPrice(user, good)
+                goods.append(good)
+        
+        # Проверить наличие каджой вещи на складах
+        t = "❕ Проверьте наличие на складах и выберите откуда закажите товар\n\n"
+        all_stores = {}
+        realy_stores = {}
+
+        
+        # Собираем список всех уникальных идентификаторов складов
+        unique_store_ids = list(set(store['store_id'] for good in goods if good for store in good['QuantityInStores']))
+
+        for good in goods:
+            qty = [x for x in list(user['cart'].values()) if x['ProductID'] == good['ProductID']][0]['Quantity']
+            t += f"💠 [{qty}шт.] <b>{cutText(good['ProductName'], 50)}</b>:\n"
+            
+            for store_id in unique_store_ids:
+                store = next((s for s in good['QuantityInStores'] if s['store_id'] == store_id), None)
+                
+                if store is not None:
+                    all_stores[store_id] = store
+                else:
+                    store = {"quantity": 0}
+                
+                if store_id not in realy_stores:
+                    realy_stores[store_id] = True
+                
+                # Check if other goods are available in the necessary quantity in the current store
+                other_goods_available = all(
+                    next((s['quantity'] for s in other_good['QuantityInStores'] if s['store_id'] == store_id), 0) >= [x for x in list(user['cart'].values()) if x['ProductID'] == other_good['ProductID']][0]['Quantity']
+                    for other_good in goods if other_good['ProductID'] != good['ProductID']
+                )
+
+                if store['quantity'] < qty:
+                    realy_stores[store_id] = False
+                    symbol = "⛔"
+                elif other_goods_available:
+                    symbol = "✅"
+                else:
+                    symbol = "⚠️"
+                if 'store_name' in store:
+                    t += f"    {symbol} [{store['quantity']} шт.] <b>{store['store_name']}</b>\n"
+
+        realy_stores = {k: v for k, v in all_stores.items() if realy_stores[k]}
+
+        t += "\n\n"
+        if '⛔' in t:
+            t += "⛔ — товара в таком количестве нет на складе\n\n"
+        if '⚠️' in t:
+            t += "⚠️ — такой товар есть в указаном количестве на складе, но остальные товары в необходимом количестве есть только на других складах\n\n"
+        if '✅' not in t:
+            t += "🤷‍♂️ Вы не можете оформить заказ так как нет подходящих складов под вашу корзину"
+        await c.message.edit_text(t, reply_markup=Keyboards.ChooseStore(realy_stores))
+       
     if action == "back":
         await showCart(user)
         await c.message.delete()
@@ -156,4 +243,5 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             else:
                 await c.message.edit_text(messageText, reply_markup=c.message.reply_markup)
         if action == "see_cart_item":
-            await sendCartItem(good, cartItem)
+            await c.answer()
+            await sendCartItem(good, cartItem, user)
