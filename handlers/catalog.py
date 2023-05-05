@@ -1,3 +1,6 @@
+import datetime
+import traceback
+from uuid import uuid4
 import aiogram
 import loguru
 from etc.filters import AntiSpam
@@ -68,7 +71,7 @@ async def _(c: CallbackQuery, state: FSMContext):
         goodID = c.data.split(":")[2]
         store_text = '\n'.join(Texts.QuantityInStoresFormat.format(
             **x) for x in GoodsService.GetGoodByID(goodID)['QuantityInStores'])
-        await c.message.answer(Texts.QuantityInStores.format(store_text=store_text))
+        await c.message.answer(Texts.QuantityInStores.format(store_text=store_text), reply_markup=Keyboards.storeQuantsKb())
 
     if action == "hide":
         await c.answer()
@@ -105,7 +108,7 @@ async def _(c: CallbackQuery, state: FSMContext):
         if subcategories_count == 0:
             await c.message.edit_text(Texts.CategoryGoodsMessage.format(category=cat,
                                                                         goods_count=len(goods)),
-                                      reply_markup=Keyboards.categoryGoods(cat, goods[:30]))
+                                      reply_markup=Keyboards.categoryGoods(cat, goods[:30], head_cat=cat['HeadGroupID']))
         else:
             await c.message.edit_text(Texts.CategoryMessage.format(category=cat,
                                                                    subcategories_count=subcategories_count,
@@ -120,11 +123,18 @@ async def _(c: CallbackQuery, state: FSMContext):
         cat = GoodsService.GetCategoryByID(catID)
         goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
         category_goods_count = len(goods)
+        req_id = str(uuid4())[:6]
+        MDB.GoodsRequests.insert_one(dict(
+            ID=req_id,
+            GoodsIDs=[x['ProductID'] for x in goods],
+            CategoryID=catID,
+            CreatedAt=datetime.datetime.now()
+        ))
 
         try:
             await c.message.edit_text(Texts.CategoryGoodsMessage.format(category=cat,
                                                                     goods_count=len(goods)),
-                                  reply_markup=Keyboards.categoryGoods(cat, goods))
+                                  reply_markup=Keyboards.filteredGoods(cat, goods, req_id, head_cat=cat['GroupID']))
         except aiogram.utils.exceptions.BadRequest as e:
             await c.answer(Texts.TooManyGoodsException)
     if action == "see_good":
@@ -183,6 +193,7 @@ async def _(c: CallbackQuery, state: FSMContext):
         await c.message.answer(Texts.PriceFilterMessage, reply_markup=Keyboards.PriceFilterMessage())  
         await state.set_state("PriceFilterState")
         await state.update_data(category_group_id=category_group_id)
+        await c.answer()
     if action == "cancel_filter":
         await state.finish()
         await c.answer()
@@ -192,8 +203,28 @@ async def _(c: CallbackQuery, state: FSMContext):
 
         await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
 
+@dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|FilteredGoods:", state="*")
+async def _(c: CallbackQuery, state: FSMContext):
+    if state:
+        await state.finish()
+    mode = c.data.split(":")[1]
+    req_id = c.data.split(":")[2]
+    start_index = int(c.data.split(":")[3])
+    user = UserService.Get(c.from_user.id)
+    r = MDB.GoodsRequests.find_one(dict(ID=req_id))
+    cat = GoodsService.GetCategoryByID(r['CategoryID'])
+    goods = [MDB.Goods.find_one(dict(ProductID=x)) for x in r['GoodsIDs']]
+    if mode == "left":
+        start_index = max(0, start_index - 20)
+    if mode == "right":
+        start_index = min(len(r['GoodsIDs']), start_index + 20)
+    try:
+        await c.message.edit_reply_markup(reply_markup=Keyboards.filteredGoods(cat, goods, req_id, start_index))
+    except aiogram.utils.exceptions.BadRequest as e:
+        loguru.logger.error(f"{e}; {traceback.format_exc()}")
+        await c.message.answer(Texts.TooManyGoodsException)
 
-@dp.message_handler(state="price_filter")
+@dp.message_handler(state="PriceFilterState")
 async def _(m: Message, state: FSMContext):
     stateData = await state.get_data()
     user = UserService.Get(m.from_user.id)
@@ -203,26 +234,37 @@ async def _(m: Message, state: FSMContext):
         max_price = float(m.text.replace('-', ' ').split(' ')[1])
         await state.update_data(min_price=min_price, max_price=max_price)
         await m.answer(Texts.RangeSetted)
-        # See goods
-        catID = stateData.category_group_id
-
-        loguru.logger.info(f"See catalog goods for category {catID}")
-
-        cat = GoodsService.GetCategoryByID(catID)
-        goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
-        pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
-        goods = [x for x in goods if min_price <= x[pr] <= max_price]
-        category_goods_count = len(goods)
-
-        try:
-            await m.answer(Texts.CategoryGoodsMessage.format(category=cat,
-                                                                    goods_count=len(goods)),
-                                  reply_markup=Keyboards.categoryGoods(cat, goods))
-        except aiogram.utils.exceptions.BadRequest as e:
-            await m.answer(Texts.TooManyGoodsException)
     except Exception as e:
         await m.answer(Texts.InvalidRange)
+        loguru.logger.error(f"Invalid range or idk: error {e}")
         return
+    # See goods
+    catID = stateData['category_group_id']
+
+    loguru.logger.info(f"See catalog goods for category {catID}")
+
+    cat = GoodsService.GetCategoryByID(catID)
+    goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
+    pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
+    goods = [x for x in goods if min_price <= x[pr] <= max_price]
+    req_id = str(uuid4())[:6]
+    MDB.GoodsRequests.insert_one(dict(
+        ID=req_id,
+        GoodsIDs=[x['ProductID'] for x in goods],
+        CategoryID=catID
+    ))
+
+    if goods == []:
+        await m.answer(Texts.NoGoodsForFilter, reply_markup=Keyboards.backToCategory(cat))
+        return
+    
+    try:
+        await m.answer(Texts.CategoryGoodsMessage.format(category=cat, goods_count=len(goods)),
+                                reply_markup=Keyboards.filteredGoods(cat, goods, req_id))
+    except aiogram.utils.exceptions.BadRequest as e:
+        loguru.logger.error(f"{e}; {traceback.format_exc()}")
+        await m.answer(Texts.TooManyGoodsException)
+    
     
     
 @dp.message_handler(state="search")
@@ -231,23 +273,32 @@ async def _(m: Message, state: FSMContext):
     user = UserService.Get(m.from_user.id)
     
     search_query = m.text
-    group_id=stateData.get("category_id")
+    cat_id=stateData.get("category_id")
     
     await state.finish()
     
     cond = {}
-    if group_id:
-        cond = dict(GroupID=group_id)
+    if cat_id:
+        cond = dict(GroupID=cat_id)
     goods = sorted(MDB.Goods.find(cond), key=lambda x: (
         fuzz.partial_ratio(m.text.lower(), x['ProductName'].lower())
     ), reverse=True)
+    
+    cat = GoodsService.GetCategoryByID(cat_id)
+    # Cut goods to maximum 30 probability
     for i in range(len(goods)):
         probability = fuzz.partial_ratio(m.text.lower(), goods[i]['ProductName'].lower())
         print(probability, goods[i]['ProductName'])
-        if probability < 30:
+        if probability < 50:
             goods = [rdotdict(x) for x in goods[:i]]
             break
-    await m.answer(Texts.SearchResults.format(found_count=len(goods)), reply_markup=Keyboards.SearchResults(goods, group_id))
+    req_id = str(uuid4())[:6]
+    MDB.GoodsRequests.insert_one(dict(
+        ID=req_id,
+        GoodsIDs=[x['ProductID'] for x in goods],
+        CategoryID=cat_id
+    ))
+    await m.answer(Texts.SearchResults.format(found_count=len(goods)), reply_markup=Keyboards.filteredGoods(cat, goods, req_id))
     
     try:
         await bot.delete_message(m.chat.id, stateData.get('msg_id'))
@@ -276,7 +327,7 @@ async def _(m: Message, state: FSMContext):
 
     # Build text
     messageText = Texts.FoundCheaperAdminMessage.format(
-        good=good, user=user, comment=comment)
+        good=good, user=user, comment=comment, BotUsername=Consts.BotUsername)
 
     # If has attached photo - send photo
     if len(m.photo) > 0:

@@ -7,6 +7,28 @@ from etc.helpers import rdotdict
 
 from loader import MDB, REQUESTS_TIMEOUT, Consts
 
+def merge_stores(stores, merge_ids, merge_to_id):
+    # найдем магазин, в который будут объединены магазины
+    merge_to_store = next((store for store in stores if store["store_id"] == merge_to_id), None)
+
+    # если магазин не найден, создадим новый магазин
+    if not merge_to_store:
+        merge_to_store = {"store_name": "DiForce ОПТОВЫЙ", "store_id": merge_to_id, "quantity": 0}
+        stores.append(merge_to_store)
+
+    # объединим магазины в один магазин
+    stores_to_remove = []
+    for store in stores:
+        if store["store_id"] in merge_ids:
+            merge_to_store["quantity"] += store["quantity"]
+            stores_to_remove.append(store)
+
+    # удаляем объединенные магазины из списка
+    for store in stores_to_remove:
+        stores.remove(store)
+
+    # вернем обновленный список магазинов
+    return stores
 
 def adaptGood(good: dict, goodEntities: List[dict] = None):
     from services.goodsService import GoodsService
@@ -23,6 +45,9 @@ def adaptGood(good: dict, goodEntities: List[dict] = None):
     if goodEntities:
         good['QuantityInStores'] = [
             dict(store_name=x['StoreName'], store_id=x["StoreID"], quantity=x['Quantity']) for x in goodEntities]
+    
+    good['QuantityInStores'] = merge_stores(good['QuantityInStores'], ["000000002"], "000000001")
+    
     for x in ["Price000000005",
               "ProductART",
               "Price000000004",

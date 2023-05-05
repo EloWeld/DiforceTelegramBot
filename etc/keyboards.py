@@ -11,8 +11,21 @@ from services.textService import Texts
 
 class Keyboards:
     @staticmethod
-    def SearchQuery():
+    def backToCategory(cat):
         k = IKeyboard(resize_keyboard=True)
+        k.row(IButton(Texts.BackButton, callback_data=f"|Catalog:see_cat:{cat['GroupID']}"))
+        return k
+    
+    @staticmethod
+    def storeQuantsKb():
+        k = IKeyboard()
+        k.row(IButton(Texts.HideButton, callback_data=f"|Cart:hide"))
+        return k
+        
+    
+    @staticmethod
+    def SearchQuery():
+        k = IKeyboard()
         k.row(IButton(Texts.CancelSearchButton, callback_data="|Catalog:cancel_search"))
         return k
     
@@ -88,7 +101,7 @@ class Keyboards:
         return k
 
     @staticmethod
-    def categoryGoods(cat, goods):
+    def categoryGoods(cat, goods, head_cat=None):
         k = IKeyboard(row_width=1)
         k.insert(IButton(Texts.SearchButton,
                          callback_data=f"|Catalog:search:{cat['GroupID']}"))
@@ -97,8 +110,34 @@ class Keyboards:
             k.insert(IButton(good['ProductName'],
                              callback_data=f"|Catalog:see_good:{good['ProductID']}"))
         # Back button
-        k.row(IButton(Texts.BackButton,
-                      callback_data=f"|Catalog:see_cat:{cat['HeadGroupID']}"))
+        if head_cat:
+            k.row(IButton(Texts.BackButton,
+                        callback_data=f"|Catalog:see_cat:{head_cat}"))
+        else:
+            k.row(IButton(Texts.BackButton,
+                        callback_data=f"|Catalog:main"))
+        return k
+    
+    @staticmethod
+    def filteredGoods(cat, goods, req_id, start_index=0, head_cat=None):
+        k = IKeyboard(row_width=3)
+        for good in goods[start_index:start_index+20]:
+            k.row(IButton(good['ProductName'],
+                             callback_data=f"|Catalog:see_good:{good['ProductID']}"))
+            
+        k.row()
+        # Prev goods
+        if len(goods) > 20 and start_index > 0:
+            k.insert(IButton("⬅️",
+                      callback_data=f"|FilteredGoods:left:{req_id}:{start_index}"))
+        # Back button
+        k.insert(IButton(Texts.QuitButton,
+                    callback_data=f"|Catalog:see_cat:{head_cat if head_cat else cat['GroupID']}"))
+        
+        # Next goods
+        if len(goods) > 20 and start_index < len(goods) - 20:
+            k.insert(IButton("➡️",
+                      callback_data=f"|FilteredGoods:right:{req_id}:{start_index}"))
         return k
     
     @staticmethod
@@ -135,7 +174,7 @@ class Keyboards:
 
     @staticmethod
     def foundCheaperMenu():
-        k = Keyboard(row_width=1)
+        k = Keyboard(resize_keyboard=True)
         k.row(Texts.QuitButton)
         return k
 
