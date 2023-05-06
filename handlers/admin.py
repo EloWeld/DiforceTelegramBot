@@ -94,7 +94,10 @@ async def process_mailing_photo(message: types.Message, state: FSMContext):
 
 @dp.message_handler(lambda message: message.text and len(message.text.strip()) > 0, state=Mailing.links)
 async def process_links(message: types.Message, state: FSMContext):
-    kb = Keyboards.ParseLinks(message.text)
+    try:
+        kb = Keyboards.ParseLinks(message.text)
+    except Exception:
+        kb = None
 
     await state.update_data(inline_keyboard=kb)
     

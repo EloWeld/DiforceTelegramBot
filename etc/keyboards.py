@@ -21,6 +21,13 @@ class Keyboards:
         k = IKeyboard()
         k.row(IButton(Texts.HideButton, callback_data=f"|Cart:hide"))
         return k
+    
+    @staticmethod
+    def addedToCart(good):
+        k = IKeyboard()
+        k.row(IButton(Texts.ChangeAmount, callback_data=f"|Cart:specify_cart_quantity_2:{good.ProductID}"))
+        return k
+        
         
     
     @staticmethod
@@ -44,19 +51,19 @@ class Keyboards:
         return k
 
     @staticmethod
-    def OrderHistory(orders):
+    def OrderHistory(orders, diforce_user_id):
         kb = IKeyboard()
         # Замените эту строку на реальные заказы пользователя из базы данных
         for order in orders:
-            kb.add(IButton(f"Заказ №{order.id}", callback_data=f"see_order:{order.id}"))
-        kb.add(IButton("Назад", callback_data="back_to_personal_cabinet"))
+            kb.add(IButton(f"Заказ №{order.id}", callback_data=f"see_order:{order.id}:{diforce_user_id}"))
+        kb.add(IButton("Назад", callback_data="profile"))
         return kb
 
     @staticmethod
     def Profile(user):
         kb = IKeyboard()
-        # Замените эту строку на реальные заказы пользователя из базы данных
-        kb.add(IButton(f"История заказов", callback_data=f"profile:orders_history"))
+        if user['is_authenticated']:
+            kb.add(IButton(f"История заказов", callback_data=f"profile:orders_history"))
         kb.row(IButton(Texts.OptPricesFileButton, url="https://diforce.ru/price.xlsx"))
         return kb
     
@@ -64,8 +71,8 @@ class Keyboards:
     @staticmethod
     def OrderInfo(order):
         k = IKeyboard(row_width=2)
-        k.row(IButton("Повторить заказ", callback_data=f"repeat_order:{order.id}"),
-              IButton("Назад", callback_data="back_to_order_history"))
+        k.row(IButton("Повторить заказ", callback_data=f"repeat_order:{order.id}"))
+        k.row(IButton("Назад", callback_data="profile:orders_history"))
         return k
 
     @staticmethod
@@ -167,8 +174,8 @@ class Keyboards:
               callback_data=f"|Good:add_to_cart:{good['ProductID']}"))
         k.row(IButton(Texts.FoundCheaperButton,
               callback_data=f"|Good:found_cheaper:{good['ProductID']}"))
-        k.row(IButton(Texts.StoreQuantsButton,
-              callback_data=f"|Good:store_quants:{good['ProductID']}"))
+        # k.row(IButton(Texts.StoreQuantsButton,
+        #       callback_data=f"|Good:store_quants:{good['ProductID']}"))
         k.row(IButton(Texts.HideButton, callback_data=f"|Good:hide:{media_group_message_id}"))
         return k
 
@@ -231,7 +238,7 @@ class Keyboards:
             return k
         except Exception as e:
             loguru.logger.error(f"Can't parse keyboard, {e}")
-            return False
+            return None
         
     @staticmethod
     def ConfirmMailing():

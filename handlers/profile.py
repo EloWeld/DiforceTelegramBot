@@ -12,21 +12,29 @@ from services.orderService import OrderService
 from services.textService import Texts
 from services.userService import UserService
 from loader import dp
+from utils import cutText
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('see_order:'))
 async def order_info(call: CallbackQuery):
     order_id = call.data.split(':')[1]
-    order = OrderService.Get(order_id)
-    await call.message.answer("В разработке")
-    return
-    order_text = f"Заказ №{order.id}\n" \
-                 f"Дата заказа: {order.date}\n" \
-                 f"Сумма: {order.total}\n" \
-                 f"Статус: {order.status}\n"
+    user_id = call.data.split(':')[2]
+    order = OrderService.Get(order_id, user_id)
+    order_items_text = '\n'.join(f"[{product['qty']} шт.] * <a href='https://t.me/DiforceBot?start=good_{product['id']}'>{cutText(product['name'], 30):30}</a> = <code>{product['summary']:,}₽</code>" for product in order['items'])
+    order_text = f"""Заказ №<code>{order.id}</code>\n
+Дата заказа: <code>{order.created_at.strftime('%Y-%m-%d %H:%M:%S')}</code>
+
+{"🤖 Заказ через бота" if order.created_with_bot else "🌐 Заказ через сайт"}
+
+Сумма заказа: <code>{order['amount']:,}₽</code>
+Состав заказа:
+{
+    order_items_text
+}
+"""f"" 
 
     # Отправка сообщения с информацией о заказе и кнопками "Назад" и "Повторить заказ"
-    await call.message.answer(order_text, reply_markup=Keyboards.OrderInfo(order))
+    await call.message.edit_text(order_text, reply_markup=Keyboards.OrderInfo(order))
     
 @dp.callback_query_handler(lambda c: c.data.startswith("repeat_order:"), state="*")
 async def repeat_order(c: CallbackQuery, state: FSMContext):
@@ -36,7 +44,7 @@ async def repeat_order(c: CallbackQuery, state: FSMContext):
     user = UserService.Get(user_id)
 
     order_id = int(c.data.split(":")[1])
-    order = OrderService.Get(order_id)
+    order = OrderService.Get(order_id, user.diforce_data.ID)
     order_items = order.items
     # Здесь проверяйте наличие товаров на складе и выводите соответствующие уведомления
     await check_order_availability_and_show_warnings(order_items, user_id)
@@ -64,26 +72,27 @@ async def edit_order(order_id, user_id):
     pass
 
 
-@dp.callback_query_handler(lambda call: call.data.startswith('profile:orders_history'))
+@dp.callback_query_handler(lambda call: call.data.startswith('profile'))
 async def order_info(c: CallbackQuery):
-    user_id = c.from_user.id
-    user = UserService.Get(user_id)
-    orders = []
-    try:
-        orders = OneService.GetOrdersByUser(user)
-        orders = [rdotdict(dict(
-            id=x['OrderID'].split(' ')[2],
-            user_id=user.id,
-            items=[],
-            created_at=datetime.datetime.strptime(x['OrderID'].split('от ')[1], '%d.%m.%Y %H:%M:%S')
-            )) for x in orders]
-    except Exception as e:
-        orders = OrderService.GetOrdersByUserId(user_id)
-        loguru.logger.error(f"Error getting orders: {e}; traceback: {traceback.format_exc()}")
-    if not orders:
-        await c.answer(Texts.YourOrdersHistoryIsEmpty, show_alert=True)
-        return
-    await c.message.answer(Texts.YourOrderHistory, reply_markup=Keyboards.OrderHistory(orders))
+    options = c.data.split(':')
+    if len(options) == 1:
+        # Profile
+        user_id = c.from_user.id
+        user = UserService.Get(user_id)
+        text = f"Личный кабинет пользователя {user.fullname}\n"
+        if user.is_authenticated:
+            text += "\n<b>✅ Вход выполнен ✅</b>\n"
+        await c.message.edit_text(text=text, reply_markup=Keyboards.Profile(user))
+    elif options[1] == "orders_history":
+        user_id = c.from_user.id
+        user = UserService.Get(user_id)
+        d_orders = OrderService.GetOrdersByUser(user)
+        
+            
+        if not d_orders:
+            await c.answer(Texts.YourOrdersHistoryIsEmpty, show_alert=True)
+            return
+        await c.message.edit_text(Texts.YourOrderHistory, reply_markup=Keyboards.OrderHistory(d_orders, user.diforce_data.ID))
     
 
 @dp.message_handler(Text(Texts.Profile), state="*")
@@ -92,8 +101,7 @@ async def show_personal_cabinet(m: Message, state: FSMContext):
         await state.finish()
     user_id = m.from_user.id
     user = UserService.Get(user_id)
-    orders = OrderService.GetOrdersByUserId(user_id)
     text = f"Личный кабинет пользователя {user.fullname}\n"
     if user.is_authenticated:
         text += "\n<b>✅ Вход выполнен ✅</b>\n"
-    await m.answer(text=text, reply_markup=Keyboards.Profile(orders))
+    await m.answer(text=text, reply_markup=Keyboards.Profile(user))

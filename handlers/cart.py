@@ -15,6 +15,7 @@ from etc.keyboards import Keyboards
 from loader import MDB, dp, bot, Consts
 from services.goodsService import GoodsService
 from services.oneService import OneService
+from services.orderService import OrderService
 from services.textService import Texts
 from services.userService import UserService
 from utils import cutText
@@ -96,7 +97,10 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
     good = GoodsService.GetGoodByID(cartItem['ProductID'], False)
     
     UserService.Update(user)
-    await sendCartItem(good, cartItem, user)
+    if stateData['from_adding']:
+        await m.answer(f"✅ Количество изменено на <code>{quantity}шт</code>!")
+    else:
+        await sendCartItem(good, cartItem, user)
     
     if state:
         await state.finish()
@@ -114,6 +118,9 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         await c.message.delete()
     if action == "make_an_order_store":
         storeID = c.data.split(':')[2]
+        if not user.is_authenticated:
+            await c.message.answer(f"⚠️ Заказ доступен только авторизированным пользователям! Для авторизации нажмите кнопку <b>{Texts.AuthButton}</b>")
+            return
         
         for cartItem in list(user['cart'].values()):
             good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
@@ -122,13 +129,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         
         success_order = OneService.CreateOrder(user, storeID)
         if success_order:
-            MDB.Orders.insert_one(dict(
-                id=str(uuid4()),
-                user_id=user.id,
-                store_id=storeID,
-                created_at=datetime.datetime.now(),
-                items=user['cart']
-            ))
+            MDB.Orders.insert_one(OrderService.CreateWithBot(success_order, user))
             user['cart'] = {}
             UserService.Update(user)
             
@@ -204,7 +205,12 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         cartItemID = c.data.split(":")[2]
         await c.message.answer(Texts.SpecifyCartQuantity, reply_markup=Keyboards.CancelCartQuantity())
         await state.set_state("cart_product_quantity")
-        await state.update_data(cartItemID=cartItemID)
+        await state.update_data(cartItemID=cartItemID, from_adding=False)
+    if action == "specify_cart_quantity_2":
+        cartItemID = c.data.split(":")[2]
+        await c.message.edit_text(Texts.SpecifyCartQuantity, reply_markup=Keyboards.CancelCartQuantity())
+        await state.set_state("cart_product_quantity")
+        await state.update_data(cartItemID=cartItemID, from_adding=True)
 
     if action in ['dec_count', 'inc_count', 'see_cart_item', 'remove_from_cart']:
         goodsID = c.data.split(':')[2]

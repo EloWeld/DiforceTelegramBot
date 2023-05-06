@@ -57,7 +57,7 @@ async def _(c: CallbackQuery, state: FSMContext):
         goodID = c.data.split(":")[2]
         good = GoodsService.GetGoodByID(goodID)
         UserService.AddToCart(user.id, good)
-        await c.message.answer(Texts.AddedToCart, reply_markup=Keyboards.startMenu(user))
+        await c.message.answer(Texts.AddedToCart, reply_markup=Keyboards.addedToCart(good))
 
     if action == "found_cheaper":
         await c.answer()
@@ -66,12 +66,12 @@ async def _(c: CallbackQuery, state: FSMContext):
         ans_msg = await c.message.answer(Texts.FoundCheaperMessage, reply_markup=Keyboards.foundCheaperMenu())
         await state.update_data(goodID=goodID, msgID=ans_msg.message_id)
 
-    if action == "store_quants":
-        await c.answer()
-        goodID = c.data.split(":")[2]
-        store_text = '\n'.join(Texts.QuantityInStoresFormat.format(
-            **x) for x in GoodsService.GetGoodByID(goodID)['QuantityInStores'])
-        await c.message.answer(Texts.QuantityInStores.format(store_text=store_text), reply_markup=Keyboards.storeQuantsKb())
+    # if action == "store_quants":
+    #     await c.answer()
+    #     goodID = c.data.split(":")[2]
+    #     store_text = '\n'.join(Texts.QuantityInStoresFormat.format(
+    #         **x) for x in GoodsService.GetGoodByID(goodID)['QuantityInStores'])
+    #     await c.message.answer(Texts.QuantityInStores.format(store_text=store_text), reply_markup=Keyboards.storeQuantsKb())
 
     if action == "hide":
         await c.answer()
@@ -143,6 +143,7 @@ async def _(c: CallbackQuery, state: FSMContext):
         good['Price'] = GoodsService.GetTargetPrice(user, good)
         good['ColorName'] = good['ColorName'].capitalize()
         good['Price'] = f"{good['Price']:,}".replace(',',' ')
+        
         messageText = Texts.GoodCard.format(**good)
         
         loguru.logger.info(f"See good: {goodID}")

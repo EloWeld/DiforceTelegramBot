@@ -186,11 +186,14 @@ class OneServiceBase:
                                       } for cartItem in list(user['cart'].values())
                                   ]
                               })
-        if r.status_code != 200:
+        if r.status_code != 200 or r.text == '':
             loguru.logger.error(
-                f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
-            return False
-        return True
+                f"Can't create order, error from 1c, response: {r.text}, Status: {r.status_code}")
+            return None
+        if 'MessageError' in r.json():
+            loguru.logger.error(f"Can't create order, error from 1c: {r.json()['MessageError']}")
+            return None
+        return r.json()
             
     
     def GetUsersByParams(self, data):
@@ -219,6 +222,16 @@ class OneServiceBase:
             
         rdata = r.json()
         return rdata
+    
+    def GetOrder(self, order_id, diforce_user_id):
+        r = self.session.get(self.base_endpoint+"getOrder",
+                             params={"OrderID": order_id,
+                                     "ClientID":diforce_user_id})
+        if r.status_code != 200:
+            loguru.logger.error(
+                f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
+        return r.json()
+
 
 
 

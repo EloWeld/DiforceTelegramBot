@@ -66,6 +66,11 @@ class GoodsService:
         except FunctionTimedOut:
             print('Время ожидания истекло')
             good = MDB.Goods.find_one(dict(ProductID=good_id))
+            
+        try:
+            good['QtyInStore'] = [x for x in good['QuantityInStores'] if x['store_id'] == "000000001"][0]['quantity']
+        except Exception:
+            good['QtyInStore'] = 0
 
         if with_images:
             try:
