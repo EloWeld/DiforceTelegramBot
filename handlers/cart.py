@@ -95,6 +95,9 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
             cartItem = user.cart[x]
             break
     good = GoodsService.GetGoodByID(cartItem['ProductID'], False)
+    if good['QtyInStore'] == 0:
+        await m.answer(f"❌ {quantity} единиц товара нет на складе, количество не изменено")
+        return
     
     UserService.Update(user)
     if stateData['from_adding']:
@@ -116,6 +119,12 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
     if action == "hide":
         await c.message.delete()
+    if action == "clear_all":
+        user['cart'] = {}
+        UserService.Update(user)
+        await c.message.answer("✅ Козина очищена")
+        await c.message.delete()
+        
     if action == "make_an_order_store":
         storeID = c.data.split(':')[2]
         if not user.is_authenticated:
@@ -140,6 +149,11 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         goods = []
         for cartItem in list(user['cart'].values()):
             good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
+            try:
+                good['QtyInStore'] = [x for x in good['QuantityInStores'] if x['store_id'] == "000000001"][0]['quantity']
+            except Exception:
+                good['QtyInStore'] = 0
+                
             if good:
                 cartItem['Price'] = GoodsService.GetTargetPrice(user, good)
                 goods.append(good)
@@ -151,7 +165,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
         
         # Собираем список всех уникальных идентификаторов складов
-        unique_store_ids = list(set(store['store_id'] for good in goods if good for store in good['QuantityInStores']))
+        unique_store_ids = ["000000001"]
 
         for good in goods:
             qty = [x for x in list(user['cart'].values()) if x['ProductID'] == good['ProductID']][0]['Quantity']

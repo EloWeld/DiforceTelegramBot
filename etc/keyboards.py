@@ -191,7 +191,10 @@ class Keyboards:
         for cartItem in cartItems:
             k.row(IButton(cartItem.ProductName,
                   callback_data=f"|Cart:see_cart_item:{cartItem.ProductID}"))
-        k.row(IButton(Texts.MakeAnOrderButton,
+        k.row()
+        
+        k.insert(IButton(Texts.ClearCart, callback_data=f"|Cart:clear_all"))
+        k.insert(IButton(Texts.MakeAnOrderButton,
               callback_data=f"|Cart:make_an_order"))
         k.row(IButton(Texts.HideButton, callback_data=f"|Cart:hide"))
         return k

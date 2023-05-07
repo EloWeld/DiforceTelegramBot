@@ -66,6 +66,7 @@ class TextsMetaClass(type):
         CartItemTextFormat="<code>{ProductName:23} ➖➖➖ {Quantity} шт.</code>",
         CartItemMessage="\n\nВ корзине: {Quantity}",
         MakeAnOrderButton="🛎️ Оформить заказ",
+        ClearCart="🗑️ Отчистить козину",
         ClickRemovePopup="Чтобы убрать товар из корзины - нажмите \"{btn}\"",
         CartItemRemoved="✅Товар убран из корзины",
         DecrementButton="-1",

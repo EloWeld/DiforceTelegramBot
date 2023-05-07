@@ -56,6 +56,9 @@ async def _(c: CallbackQuery, state: FSMContext):
         await c.answer()
         goodID = c.data.split(":")[2]
         good = GoodsService.GetGoodByID(goodID)
+        if good['QtyInStore'] == 0:
+            await c.message.answer("❌ Товара нет на складе, добавить в корзину невозможно")
+            return
         UserService.AddToCart(user.id, good)
         await c.message.answer(Texts.AddedToCart, reply_markup=Keyboards.addedToCart(good))
 
@@ -102,6 +105,7 @@ async def _(c: CallbackQuery, state: FSMContext):
             return
         subcategories_count = len(cat['Subgroups'])
         goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
+        goods = [x for x in goods if x['QtyInStore'] > 0]
         category_goods_count = len(goods)
 
         # If category contains subcategories - throw another keyboard
@@ -122,6 +126,7 @@ async def _(c: CallbackQuery, state: FSMContext):
 
         cat = GoodsService.GetCategoryByID(catID)
         goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
+        goods = [x for x in goods if x['QtyInStore'] > 0]
         category_goods_count = len(goods)
         req_id = str(uuid4())[:6]
         MDB.GoodsRequests.insert_one(dict(
@@ -215,6 +220,8 @@ async def _(c: CallbackQuery, state: FSMContext):
     r = MDB.GoodsRequests.find_one(dict(ID=req_id))
     cat = GoodsService.GetCategoryByID(r['CategoryID'])
     goods = [MDB.Goods.find_one(dict(ProductID=x)) for x in r['GoodsIDs']]
+    goods = [x for x in goods if x['QtyInStore'] > 0]
+    
     if mode == "left":
         start_index = max(0, start_index - 20)
     if mode == "right":
@@ -247,7 +254,7 @@ async def _(m: Message, state: FSMContext):
     cat = GoodsService.GetCategoryByID(catID)
     goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
     pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
-    goods = [x for x in goods if min_price <= x[pr] <= max_price]
+    goods = [x for x in goods if min_price <= x[pr] <= max_price and x['QtyInStore'] > 0]
     req_id = str(uuid4())[:6]
     MDB.GoodsRequests.insert_one(dict(
         ID=req_id,
@@ -284,6 +291,7 @@ async def _(m: Message, state: FSMContext):
     goods = sorted(MDB.Goods.find(cond), key=lambda x: (
         fuzz.partial_ratio(m.text.lower(), x['ProductName'].lower())
     ), reverse=True)
+    goods = [x for x in goods if x['QtyInStore'] > 0]
     
     cat = GoodsService.GetCategoryByID(cat_id)
     # Cut goods to maximum 30 probability

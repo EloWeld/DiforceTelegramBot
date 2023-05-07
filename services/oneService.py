@@ -48,6 +48,11 @@ def adaptGood(good: dict, goodEntities: List[dict] = None):
     
     good['QuantityInStores'] = merge_stores(good['QuantityInStores'], ["000000002"], "000000001")
     
+    try:
+        good['QtyInStore'] = [x for x in good['QuantityInStores'] if x['store_id'] == "000000001"][0]['quantity']
+    except Exception:
+        good['QtyInStore'] = 0
+    
     for x in ["Price000000005",
               "ProductART",
               "Price000000004",

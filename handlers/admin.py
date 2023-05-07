@@ -146,7 +146,6 @@ async def process_mailing_confirm(call: types.CallbackQuery, state: FSMContext):
 # endregion broadcast
 
 
-
 @dp.callback_query_handler(lambda call: call.data.startswith("bot_users:"), Admin())
 async def process_mailing_confirm(call: types.CallbackQuery, state: FSMContext):
     action = call.data.split(":")[1]

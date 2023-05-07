@@ -61,7 +61,7 @@ async def process_full_name(message: types.Message, state: FSMContext):
         # переход в состояние inn для получения ИНН организации
         await Form.inn.set()
 
-
+from fuzzywuzzy import fuzz
 # обработчик ответа на вопрос "Ваш ИНН если есть"
 @dp.message_handler(state=Form.inn)
 async def process_inn(message: types.Message, state: FSMContext):
@@ -69,7 +69,7 @@ async def process_inn(message: types.Message, state: FSMContext):
         user = UserService.Get(message.from_user.id)
         if message.text != "0" and message.text.strip().isdigit():
             data['inn+kpp'] = message.text
-            
+        
         # ищем информацию в базе данных
         d_users = MDB.DiforceUsers.find()
         sameUsers = []
@@ -78,11 +78,12 @@ async def process_inn(message: types.Message, state: FSMContext):
             if 'inn+kpp' in data and 'INN' in d_user:
                 cond = cond and data['inn+kpp'].split('+')[0] == d_user['INN']
             if 'full_name' in data and 'FullName' in d_user:
-                cond = cond and data['full_name'].lower().replace('.', '') == d_user['FullName'].lower().replace('.', '')
+                prob = fuzz.partial_ratio(data['full_name'].lower().replace('.', ''), d_user['FullName'].lower().replace('.', ''))
+                cond = cond and  prob > 90
             if 'phone' in data and 'Phone' in d_user:
-                cond = cond and data['phone'].replace(' ', '') == d_user['Phone'].replace(' ', '')
+                cond = cond and data['phone'].replace(' ', '').replace('+7', '8') == d_user['Phone'].replace(' ', '').replace('+7', '8')
             if 'email' in data and 'Email' in d_user:
-                cond = cond and data['email'].replace(' ', '') == d_user['Email'].replace(' ', '')
+                cond = cond and data['email'].replace(' ', '') == d_user['Email'].replace(' ', '').replace('>', '').replace('<', '')
                 
             if cond:
                 sameUsers.append(d_user)
@@ -95,7 +96,7 @@ async def process_inn(message: types.Message, state: FSMContext):
             t += f"ИНН+КПП организации: {data['inn+kpp']}\n"
             
         await message.answer(t)
-        if len(sameUsers) == 1:
+        if len(sameUsers) <= 3:
             print(sameUsers)
             user = UserService.Get(message)
             user['is_authenticated'] = True
