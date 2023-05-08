@@ -100,7 +100,10 @@ class OneServiceBase:
 
             data = [adaptGood(
                 x, [y for y in data if y['ProductID'] == x['ProductID']]) for x in data]
+            # Only qty in store
+            data = [good for good in data if good['QtyInStore'] > 0]
             data = list({x['ProductID']: x for x in data}.values())
+            
         except Exception as e:
             print(f"Error get catalog: {e}")
             # Обработка ошибки таймаута

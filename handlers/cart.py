@@ -122,7 +122,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
     if action == "clear_all":
         user['cart'] = {}
         UserService.Update(user)
-        await c.message.answer("✅ Козина очищена")
+        await c.message.answer("✅ Корзина очищена")
         await c.message.delete()
         
     if action == "make_an_order_store":
