@@ -81,7 +81,7 @@ def diforceUsersSyncWrapper():
 th1 = Thread(target=diforceUsersSyncWrapper, name="Sync users from diforce thread")
 th1.start()
 schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogTreeSync()))
-schedule.every(10).minutes.at(":37").do(lambda: asyncio.run(catalogGoodsSync()))
+schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogGoodsSync()))
 
 loguru.logger.info("Starting scheduler")
 

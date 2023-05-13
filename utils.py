@@ -1,3 +1,4 @@
+import loguru
 from loader import MDB, bot
 from services.textService import Texts
 from services.userService import UserService
@@ -5,7 +6,10 @@ from services.userService import UserService
 
 async def notifyAdmins(text: str):
     for admin in UserService.Admins():
-        await bot.send_message(admin['id'], text)
+        try:
+            await bot.send_message(admin['id'], text)
+        except Exception as e:
+            loguru.logger.error(f"Can't send message to admin: {e}")
 
 def split_long_text(text: str, max_length: int = 4000):
     parts = []
@@ -30,3 +34,20 @@ def cutText(text: str, limit: int):
         return text[:limit-3] + "..."
     else:
         return text
+    
+def prepareGoodItemToSend(good):
+    """Prepare cart item message text for sending."""
+    good['PriceType'] = "МЕЛКИЙ ОПТ" if good['Price'] == good['PriceOptSmall'] else "СРЕДНИЙ ОПТ" if good['Price'] == good['PriceOptMiddle'] else "КРУПНЫЙ ОПТ" if good['Price'] == good['PriceOptLarge'] else "РОЗНИЦА"
+    good['Price'] = f"{good['Price']:,}".replace(',', ' ')
+    messageText = Texts.GoodCard.format(**good)
+    return messageText
+    
+    
+
+def prepareCartItemToSend(good, cartItem):
+    """Prepare cart item message text for sending."""
+    good['PriceType'] = "МЕЛКИЙ ОПТ" if good['Price'] == good['PriceOptSmall'] else "СРЕДНИЙ ОПТ" if good['Price'] == good['PriceOptMiddle'] else "КРУПНЫЙ ОПТ" if good['Price'] == good['PriceOptLarge'] else "РОЗНИЦА"
+    good['Price'] = f"{good['Price']:,}".replace(',', ' ')
+    messageText = Texts.GoodCard.format(
+        **good) + Texts.CartItemMessage.format(**cartItem)
+    return messageText

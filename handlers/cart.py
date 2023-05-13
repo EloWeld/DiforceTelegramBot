@@ -1,6 +1,8 @@
 import asyncio
 import base64
+from copy import copy
 import datetime
+import traceback
 from uuid import uuid4
 from dotdict import dotdict
 
@@ -18,15 +20,7 @@ from services.oneService import OneService
 from services.orderService import OrderService
 from services.textService import Texts
 from services.userService import UserService
-from utils import cutText
-
-
-def prepareCartItemToSend(good, cartItem):
-    """Prepare cart item message text for sending."""
-    good['Price'] = f"{good['Price']:,}".replace(',', ' ')
-    messageText = Texts.GoodCard.format(
-        **good) + Texts.CartItemMessage.format(**cartItem)
-    return messageText
+from utils import cutText, prepareCartItemToSend, prepareGoodItemToSend
 
 
 async def sendCartItem(good, cartItem, user):
@@ -55,10 +49,13 @@ async def showCart(user):
         if not x:
             cartItems = cartItems[:-1]
             continue
-        cart_price += x * cartItems[-1].Quantity
+        else:
+            cartItems[-1]['OneQtyPrice'] = x
+            cartItems[-1]['SummaryPrice'] = x * cartItems[-1].Quantity
+            cartItems[-1]['ProductName'] = cutText(cartItems[-1]['ProductName'], 35)
+            cart_price += x * cartItems[-1].Quantity
 
-    cartText = '\n'.join(Texts.CartItemTextFormat.format(**x)
-                         for x in cartItems)
+    cartText = '\n'.join(Texts.CartItemTextFormat.format(**x) for x in cartItems)
 
     cartPriceString = f"{cart_price:,}".replace(',', ' ')
 
@@ -101,7 +98,7 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
     
     UserService.Update(user)
     if stateData['from_adding']:
-        await m.answer(f"✅ Количество изменено на <code>{quantity}шт</code>!")
+        await m.answer(f"✅ Количество изменено на <code>{quantity}шт</code>!", reply_markup=Keyboards.startMenu(user))
     else:
         await sendCartItem(good, cartItem, user)
     
@@ -126,26 +123,55 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         await c.message.delete()
         
     if action == "make_an_order_store":
-        storeID = c.data.split(':')[2]
+        storeID = "000000001"
+        await c.answer()
+
         if not user.is_authenticated:
             await c.message.answer(f"⚠️ Заказ доступен только авторизированным пользователям! Для авторизации нажмите кнопку <b>{Texts.AuthButton}</b>")
             return
-        
-        for cartItem in list(user['cart'].values()):
-            good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
+
+        cart = user.get('cart', {})
+        for product_id, cartItem in cart.items():
+            good = MDB.Goods.find_one({'ProductID': product_id})
             if good:
                 cartItem['Price'] = GoodsService.GetTargetPrice(user, good)
-        
-        success_order = OneService.CreateOrder(user, storeID)
-        if success_order:
-            MDB.Orders.insert_one(OrderService.CreateWithBot(success_order, user))
+            else:
+                cartItem['Price'] = -1
+
+        success_order_data = OneService.CreateOrder(user, storeID)
+
+        if success_order_data:
+            saved_card = cart.copy()
+            order_data = OrderService.CreateWithBot(success_order_data, user)
+            MDB.Orders.insert_one(order_data)
             user['cart'] = {}
             UserService.Update(user)
             
             await c.message.answer("✅ Заказ сделан!")
+
+            try:
+                full_cart_summary = 0
+                order_text = f"Номер заказа: <code>{success_order_data['CreatedOrderID']}</code>\n\n"
+                order_text += "Состав заказа:\n"
+                
+                for product_id, cartItem in saved_card.items():
+                    price = cartItem['Price']
+                    quantity = cartItem['Quantity']
+                    item_total = price * quantity
+                    full_cart_summary += item_total
+                    
+                    order_text += f"<code>{quantity} шт</code> * <code>{price}₽</code> = <code>{item_total}₽</code> | <code>{product_id}</code> | <b>{cartItem['ProductName']}</b>\n\n"
+                
+                formatted_summary = f"Общая стоимость корзины: <code>{full_cart_summary:,}₽</code>".replace(',', ' ')
+                order_text += formatted_summary
+                
+                order_manager_message = f"⭐ Пользователь <a href='tg://user?id={user.id}'>{user.fullname}</a> (@{user.username}) Сделал заказ!\n\n" + order_text
+                await bot.send_message(Consts.OrderManagerID, order_manager_message)
+            except Exception as e:
+                loguru.logger.error(f"Can't send message to user about order: {e}, {traceback.format_exc()}")
         else:
             await c.message.answer("❌ Не удалось создать заказ!")
-    if action == "make_an_order":
+    if action == "make_an_order(old)":
         goods = []
         for cartItem in list(user['cart'].values()):
             good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
@@ -208,6 +234,42 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         if '✅' not in t:
             t += "🤷‍♂️ Вы не можете оформить заказ так как нет подходящих складов под вашу корзину"
         await c.message.edit_text(t, reply_markup=Keyboards.ChooseStore(realy_stores))
+        
+        
+    if action == "make_an_order":
+        await c.answer()
+        
+        if not user.is_authenticated:
+            await c.message.answer(f"⚠️ Заказ доступен только авторизированным пользователям! Для авторизации нажмите кнопку <b>{Texts.AuthButton}</b>")
+            return
+        
+        goods = []
+        cartItems = user['cart']
+        for key, cartItem in cartItems.items():
+            good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
+            try:
+                good['QtyInStore'] = [x for x in good['QuantityInStores'] if x['store_id'] == "000000001"][0]['quantity']
+            except Exception:
+                good['QtyInStore'] = 0
+                
+            if good:
+                cartItem['Price'] = GoodsService.GetTargetPrice(user, good)
+                goods.append(good)
+                
+            cartItem['good_item'] = good if good else None
+
+        can_order = True
+        for key, cItem in cartItems.items():
+            if cItem['Quantity'] > cItem['good_item']['QtyInStore']:
+                can_order = False
+                if cItem['good_item']['QtyInStore'] == 0:
+                    await c.message.answer(f"⚠️ Товара <b>{cutText(cItem['ProductName'], 50)}</b> на складе вообще не осталось, измените корзину")
+                else:
+                    await c.message.answer(f"⚠️ Товара <b>{cutText(cItem['ProductName'], 50)}</b> на складе осталось только <b>{cItem['good_item']['QtyInStore']}</b> шт., а у вас в корзине <b>{cItem['Quantity']}</b> шт., измените корзину")
+            
+                
+        if can_order:
+            await c.message.edit_text("✅ Все товары из корзины есть на складе в достаточном количестве, подтвердите создание заказа", reply_markup=Keyboards.ConfirmOrder())
        
     if action == "back":
         await showCart(user)
@@ -239,7 +301,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             user.cart[goodsID]['Quantity'] -= 1
             UserService.Update(user)
 
-            messageText = prepareCartItemToSend(good, cartItem)
+            messageText = prepareGoodItemToSend(good, cartItem)
             if c.message.caption:
                 await c.message.edit_caption(messageText, reply_markup=c.message.reply_markup)
             else:

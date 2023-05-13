@@ -15,6 +15,7 @@ class TextsMetaClass(type):
         OptPricesFileButton="Для оптовиков",
         OptFileMessage="Для оптовиков вот файл",
         AuthButton="Войти",
+        LogoutButton="🚪 Выйти из ЛК",
         # Catalog
         CatalogMessage="🛍️ Каталог товаров",
         CategoryMessage="️️⏺️ Категория {category.GroupName}\n"
@@ -30,11 +31,11 @@ class TextsMetaClass(type):
 🔖 Артикул: <b>{ProductArt}</b>
 
 💠 Наименование: <b>{ProductName}</b>
-🗄️ Склад: <b>{StoreName}</b>
+🗄️ Склад: <b>Diforce ОПТОВЫЙ</b>
 🎨 Цвет: <b>{ColorEmoji} {ColorName}</b>
 
 📦 Количество на складе: <code>{QtyInStore}</code>
-💰 Цена: <b>{Price} ₽</b>
+💰 Цена: <b>{Price} ₽</b> <i>({PriceType})</i>
 
 📜 Описание: 
 <b>{ProductDescription}</b>
@@ -52,7 +53,6 @@ class TextsMetaClass(type):
 Наличие на складах
 {store_text}
 """,
-        QuantityInStoresFormat="<code>{store_name:24} ➖➖➖ {quantity} шт.</code> ",
         # FoundCheaper
         FoundCheaperMessage="🛒 Нашли дешевле?\n🎁 Мы предложим цену ещё лучше. \n⚠️ Закрепи фото или ссылку продавца.\n",
         FoundCheaperAdminMessage="""
@@ -63,7 +63,7 @@ class TextsMetaClass(type):
         # Cart
         YourCartMessage="🛒 Ваша корзина\nИтого: <b>{cart_price} ₽</b>\n\n{cart_text}",
         YourCartIsEmpty="🛒 Ваша корзина пуста!",
-        CartItemTextFormat="<code>{ProductName:23} ➖➖➖ {Quantity} шт.</code>",
+        CartItemTextFormat="<code>[{Quantity} шт. * {OneQtyPrice} = {SummaryPrice} ₽] {ProductName}</code> ",
         CartItemMessage="\n\nВ корзине: {Quantity}",
         MakeAnOrderButton="🛎️ Оформить заказ",
         ClearCart="🗑️ Отчистить козину",
@@ -126,6 +126,12 @@ class TextsMetaClass(type):
         Cancel="❌ Отменить",
         HideButton="➖Скрыть➖",
         BackButton="◀️ Назад",
+        
+        # Logout
+        LogoutPopupText="⚠️ Вы уверены что хотите выйти из личного кабинета? Для повторного входа нужно будет вводить данные заново",
+        YouLoggedOut="🚪 Вы вышли из аккаунта",
+        Yes="Да",No="Нет",
+        YouAreLoggedOut="⚠️Вы не вошли в аккаунт!",
         
         # Identification
         PleaseFillForm="Пожалуйста заполните форму для идентификации. Вводите те же данные что и на сайте.",

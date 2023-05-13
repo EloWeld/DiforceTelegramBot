@@ -14,7 +14,7 @@ from services.textService import Texts
 
 from aiogram.types import Message, ChatType, BotCommand, CallbackQuery, ContentType, MediaGroup, InputFile
 from services.userService import UserService
-from utils import prepareUserToPrint
+from utils import prepareGoodItemToSend, prepareUserToPrint
 
 
 async def parseStartMessage(m: Message):
@@ -33,8 +33,8 @@ async def parseStartMessage(m: Message):
         good, images = GoodsService.GetGoodByID(goodID, with_images=True)
         good['Price'] = GoodsService.GetTargetPrice(user, good)
         good['ColorName'] = good['ColorName'].capitalize()
-        good['Price'] = f"{good['Price']:,}".replace(',',' ')
-        messageText = Texts.GoodCard.format(**good)
+        
+        messageText = prepareGoodItemToSend(good)
         
         loguru.logger.info(f"See good: {goodID}")
 
@@ -89,3 +89,8 @@ async def _(m: Message, command: Command.CommandObj, state: FSMContext):
         BotCommand("start", "Перезагрузить бота"),
         BotCommand("help", "Помощь")
     ])
+
+
+@dp.callback_query_handler(lambda call: call.data.startswith('|just_hide|'))
+async def _(c: CallbackQuery):
+    await c.message.delete()

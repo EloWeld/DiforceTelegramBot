@@ -24,6 +24,7 @@ from dotdict import dotdict
 
 from services.textService import Texts
 from services.userService import UserService
+from utils import prepareGoodItemToSend
 
 # ▒▄█▀▀█░▐█▀▀─░▄█▀▄─▒▐█▀▀▄░▐█▀█░▐█░▐█
 # ▒▀▀█▄▄░▐█▀▀░▐█▄▄▐█▒▐█▒▐█░▐█──░▐████
@@ -68,13 +69,6 @@ async def _(c: CallbackQuery, state: FSMContext):
         await state.set_state("FoundItCheaper")
         ans_msg = await c.message.answer(Texts.FoundCheaperMessage, reply_markup=Keyboards.foundCheaperMenu())
         await state.update_data(goodID=goodID, msgID=ans_msg.message_id)
-
-    # if action == "store_quants":
-    #     await c.answer()
-    #     goodID = c.data.split(":")[2]
-    #     store_text = '\n'.join(Texts.QuantityInStoresFormat.format(
-    #         **x) for x in GoodsService.GetGoodByID(goodID)['QuantityInStores'])
-    #     await c.message.answer(Texts.QuantityInStores.format(store_text=store_text), reply_markup=Keyboards.storeQuantsKb())
 
     if action == "hide":
         await c.answer()
@@ -147,9 +141,9 @@ async def _(c: CallbackQuery, state: FSMContext):
         good, images = GoodsService.GetGoodByID(goodID, with_images=True)
         good['Price'] = GoodsService.GetTargetPrice(user, good)
         good['ColorName'] = good['ColorName'].capitalize()
-        good['Price'] = f"{good['Price']:,}".replace(',',' ')
         
-        messageText = Texts.GoodCard.format(**good)
+        
+        messageText = prepareGoodItemToSend(good)
         
         loguru.logger.info(f"See good: {goodID}")
 
@@ -167,15 +161,20 @@ async def _(c: CallbackQuery, state: FSMContext):
                 img_size = Image.open(BytesIO(b_img)).size
                 print('Image size:', img_size)
                 # Check that image not too small
-                if img_size[0]*img_size[1] > 160000:
+                if img_size[0]*img_size[1] > 16000:
                     attached_images_count += 1
                     media_group.attach_photo(wrap_media(b_img))
                 if len(images) == i + 1: # if we walk around all images
                     break
                 
             # Send media group and message
-            mid = await c.message.answer_media_group(media_group)
-            message_id_links[str(mid[0].message_id)] = [x.message_id for x in mid]
+            try:
+                mid = await c.message.answer_media_group(media_group)
+            except Exception as e:
+                loguru.logger.error(f"Cant send media group: {media_group}; e: {e}; traceback: {traceback.format_exc()}")
+                mid = []
+            if mid:
+                message_id_links[str(mid[0].message_id)] = [x.message_id for x in mid]
             keyboard = Keyboards.goodOptions(good, mid[0].message_id)
             await c.message.answer(messageText, reply_markup=keyboard)
         else:

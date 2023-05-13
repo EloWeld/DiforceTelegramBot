@@ -86,6 +86,11 @@ async def order_info(c: CallbackQuery):
     elif options[1] == "orders_history":
         user_id = c.from_user.id
         user = UserService.Get(user_id)
+        
+        if not user['diforce_data']:
+            await c.answer(Texts.YouAreLoggedOut, show_alert=True)
+            return
+        
         d_orders = OrderService.GetOrdersByUser(user)
         
             
@@ -93,6 +98,18 @@ async def order_info(c: CallbackQuery):
             await c.answer(Texts.YourOrdersHistoryIsEmpty, show_alert=True)
             return
         await c.message.edit_text(Texts.YourOrderHistory, reply_markup=Keyboards.OrderHistory(d_orders, user.diforce_data.ID))
+        
+    elif options[1] == "logout_popup":
+        await c.message.answer(Texts.LogoutPopupText, reply_markup=Keyboards.Popup("profile:logout"))        
+        await c.answer()
+    elif options[1] == "logout":
+        user_id = c.from_user.id
+        user = UserService.Get(user_id)
+        user['is_authenticated'] = False
+        user['diforce_data'] = None
+        UserService.Update(user)
+        await c.message.answer(Texts.YouLoggedOut, reply_markup=Keyboards.startMenu(user))
+        await c.message.delete()
     
 
 @dp.message_handler(Text(Texts.Profile), state="*")

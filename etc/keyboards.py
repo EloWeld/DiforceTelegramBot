@@ -47,7 +47,6 @@ class Keyboards:
             k.row(Texts.AdminMenuButton)
         if user and (not user.is_authenticated):
             k.row(Texts.AuthButton)
-        #k.row(Texts.OptPricesFileButton)
         return k
 
     @staticmethod
@@ -61,11 +60,14 @@ class Keyboards:
 
     @staticmethod
     def Profile(user):
-        kb = IKeyboard()
+        k = IKeyboard()
         if user['is_authenticated']:
-            kb.add(IButton(f"История заказов", callback_data=f"profile:orders_history"))
-        kb.row(IButton(Texts.OptPricesFileButton, url="https://diforce.ru/price.xlsx"))
-        return kb
+            k.add(IButton(f"История заказов", callback_data=f"profile:orders_history"))
+        k.row(IButton(Texts.OptPricesFileButton, url="https://diforce.ru/price.xlsx"))
+        
+        if user['is_authenticated']:
+            k.row(IButton(Texts.LogoutButton, callback_data=f"profile:logout_popup"))
+        return k
     
     
     @staticmethod
@@ -288,4 +290,18 @@ class Keyboards:
             k.row(IButton(store['store_name'], callback_data=f"|Cart:make_an_order_store:{store['store_id']}"))
             
         k.row(IButton(Texts.BackButton, callback_data=f"|Cart:back"))
+        return k
+    
+    @staticmethod
+    def ConfirmOrder():
+        k = IKeyboard()
+        k.row(IButton("⭐ Оформить заказ", callback_data=f"|Cart:make_an_order_store"))
+        k.row(IButton(Texts.BackButton, callback_data=f"|Cart:back"))
+        return k
+    
+    @staticmethod
+    def Popup(success_path: str):
+        k = IKeyboard()
+        k.insert(IButton(Texts.No, callback_data=f"|just_hide|"))
+        k.insert(IButton(Texts.Yes, callback_data=success_path))
         return k
