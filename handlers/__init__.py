@@ -1,5 +1,6 @@
 from .start import *
 from .catalog import *
+from .req import *
 from .cart import *
 from .commands import *
 from .profile import *

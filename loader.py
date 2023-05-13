@@ -26,6 +26,12 @@ message_id_links={}
 # Initialize MongoDB
 
 MDB = MongoClient(MONGO_CREDENTIALS).get_database(MONGO_DB_NAME)
+MDB.Goods.create_index([
+    ("GroupName", "text"),
+    ("ProductName", "text"),
+    ("Manufacturer", "text"),
+    ("ProductDescription", "text")
+])
 
 
 class ConstantsMetaClass(type):

@@ -93,16 +93,20 @@ class Keyboards:
         k = IKeyboard(row_width=1)
         k.insert(IButton(Texts.SearchButton,
                          callback_data=f"|Catalog:search:{category['GroupID']}"))
-        k.row()
         for subcat in list(category['Subgroups'].values()):
-            k.insert(IButton(subcat['GroupName'],
+            k.row(IButton(subcat['GroupName'],
                              callback_data=f"|Catalog:see_cat:{subcat['GroupID']}"))
         # Goods in category button
         if goods:
             k.row(IButton(Texts.CategoryGoodsButton,
                   callback_data=f"|Catalog:see_cat_goods:{category['GroupID']}"))
-        # Back button
-        k.row(IButton(Texts.PriceFilter,
+        
+        # Brand filter
+        k.row()
+        k.insert(IButton(Texts.BrandFilter,
+                      callback_data=f"|Catalog:brand_filter:{category['GroupID']}"))
+        # Price filter
+        k.insert(IButton(Texts.PriceFilter,
                       callback_data=f"|Catalog:price_filter:{category['GroupID']}"))
         # Back button
         k.row(IButton(Texts.BackButton,
@@ -111,13 +115,22 @@ class Keyboards:
 
     @staticmethod
     def categoryGoods(cat, goods, head_cat=None):
-        k = IKeyboard(row_width=1)
+        k = IKeyboard(row_width=3)
         k.insert(IButton(Texts.SearchButton,
                          callback_data=f"|Catalog:search:{cat['GroupID']}"))
-        k.row()
         for good in goods:
-            k.insert(IButton(good['ProductName'],
+            k.row(IButton(good['ProductName'],
                              callback_data=f"|Catalog:see_good:{good['ProductID']}"))
+        
+        # Brand filter
+        k.row()
+        k.insert(IButton(Texts.BrandFilter,
+                      callback_data=f"|Catalog:brand_filter:{cat['GroupID']}"))
+            
+        # Price filter
+        k.insert(IButton(Texts.PriceFilter,
+                      callback_data=f"|Catalog:price_filter:{cat['GroupID']}"))
+        
         # Back button
         if head_cat:
             k.row(IButton(Texts.BackButton,
@@ -130,18 +143,37 @@ class Keyboards:
     @staticmethod
     def filteredGoods(cat, goods, req_id, start_index=0, head_cat=None):
         k = IKeyboard(row_width=3)
+        # Search
+        k.insert(IButton(Texts.SearchButton,
+                         callback_data=f"|Catalog:search:{req_id}"))
+        
         for good in goods[start_index:start_index+20]:
             k.row(IButton(good['ProductName'],
                              callback_data=f"|Catalog:see_good:{good['ProductID']}"))
+            
+        
+        # Brand filter
+        k.row()
+        k.insert(IButton(Texts.BrandFilter,
+                      callback_data=f"|Catalog:brand_filter:{req_id}"))
+            
+        # Price filter
+        k.insert(IButton(Texts.PriceFilter,
+                      callback_data=f"|Catalog:price_filter:{req_id}"))
+        
             
         k.row()
         # Prev goods
         if len(goods) > 20 and start_index > 0:
             k.insert(IButton("⬅️",
                       callback_data=f"|FilteredGoods:left:{req_id}:{start_index}"))
-        # Back button
-        k.insert(IButton(Texts.QuitButton,
-                    callback_data=f"|Catalog:see_cat:{head_cat if head_cat else cat['GroupID']}"))
+        if cat:
+            # Back button
+            k.insert(IButton(Texts.QuitButton,
+                        callback_data=f"|Catalog:see_cat:{head_cat if head_cat else cat['GroupID']}"))
+        else:
+            k.insert(IButton(Texts.QuitButton,
+                        callback_data=f"|Catalog:main"))
         
         # Next goods
         if len(goods) > 20 and start_index < len(goods) - 20:
@@ -163,10 +195,20 @@ class Keyboards:
         return k
     
     @staticmethod
-    def PriceFilterMessage():
+    def PriceFilterMessage(filter_type="price"):
         k = IKeyboard(row_width=1)
-        k.row(IButton(Texts.Cancel, callback_data="|Catalog:cancel_filter"))
+        k.row(IButton(Texts.Cancel, callback_data=f"|Catalog:cancel_filter:{filter_type}"))
         return k
+    
+    @staticmethod
+    def BrandFilter(all_brands, selected_brands):
+        k = IKeyboard()
+        for x in all_brands:
+            k.insert(IButton(('☑️' if x not in selected_brands else '✅ ') + x, callback_data=f"|Catalog:brand_filter_choose:{x}"))
+        k.row(IButton(Texts.Show, callback_data=f"|Catalog:brand_filter_show"))
+        k.row(IButton(Texts.Cancel, callback_data=f"|Catalog:cancel_filter:brand"))
+        return k
+        
         
 
     @staticmethod

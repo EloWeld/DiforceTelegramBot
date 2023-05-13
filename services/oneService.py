@@ -40,6 +40,7 @@ def adaptGood(good: dict, goodEntities: List[dict] = None):
     good['PriceOptSmall'] = good['Price000000004']
     good['PriceOptMiddle'] = good['Price000000003']
     good['PriceOptLarge'] = good['PriceЦБ0000001']
+    good['Manufacturer'] = good['Manufacturer'] if good['Manufacturer'] not in ['', 'no name'] else 'Незвестно'
     GoodsService.SpecifyColorEmoji(good)
 
     if goodEntities:

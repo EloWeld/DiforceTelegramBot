@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 from threading import Thread
 import time
 import traceback
@@ -60,6 +61,9 @@ async def catalogGoodsSync():
         MDB.Goods.insert_one(x)
     loguru.logger.success(f"[CATALOG]: Catalogs has been updated successfully within {time.time() - startTime} seconds")
 
+async def goodRequestsCleaner():
+    MDB.GoodsRequests.delete_many(dict(CreatedAt={"$lt": datetime.datetime.now() - datetime.timedelta(days=1)}))
+
 async def diforceUsersSync():
     loguru.logger.info("[DIFORCE-USERS]: Start sync users")
     try:
@@ -82,9 +86,11 @@ th1 = Thread(target=diforceUsersSyncWrapper, name="Sync users from diforce threa
 th1.start()
 schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogTreeSync()))
 schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogGoodsSync()))
+schedule.every(50).minutes.at(":37").do(lambda: asyncio.run(goodRequestsCleaner()))
 
 loguru.logger.info("Starting scheduler")
 
+asyncio.run(goodRequestsCleaner())
 asyncio.run(catalogTreeSync())
 asyncio.run(catalogGoodsSync())
 

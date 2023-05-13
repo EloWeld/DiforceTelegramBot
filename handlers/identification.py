@@ -96,7 +96,7 @@ async def process_inn(message: types.Message, state: FSMContext):
             t += f"ИНН+КПП организации: {data['inn+kpp']}\n"
             
         await message.answer(t)
-        if len(sameUsers) <= 3:
+        if len(sameUsers) <= 3 and len(sameUsers) > 0:
             print(sameUsers)
             user = UserService.Get(message)
             user['is_authenticated'] = True
