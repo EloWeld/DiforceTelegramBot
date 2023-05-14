@@ -132,7 +132,7 @@ async def _(m: Message, state: FSMContext):
         return
     
     try:
-        await m.answer(Texts.CategoryGoodsMessage.format(category=cat, goods_count=len(goods)),
+        await m.answer(Texts.FilteredGoodsMessage + f" ({len(goods)})",
                                 reply_markup=Keyboards.filteredGoods(cat, goods, req_id))
     except aiogram.utils.exceptions.BadRequest as e:
         loguru.logger.error(f"{e}; {traceback.format_exc()}")

@@ -24,7 +24,7 @@ class TextsMetaClass(type):
         SearchButton="🔎 Поиск",
         CategoryGoodsMessage="💠 Товары категории {category.GroupName} ({goods_count})",
         FilteredGoodsMessage="💠 Отфильтрованные товары",
-        BrandsGoodsMessage="💠 Товаары выбранных брендов",
+        BrandsGoodsMessage="💠 Товаары выбранных брендов ({goods_count})",
         CategoryGoodsButton="🛒 Товары в категории 🛒",
 
         # Good in catalog
