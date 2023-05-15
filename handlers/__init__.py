@@ -3,6 +3,7 @@ from .catalog import *
 from .req import *
 from .cart import *
 from .commands import *
+from .chat import *
 from .profile import *
 from .admin import *
 from .identification import *

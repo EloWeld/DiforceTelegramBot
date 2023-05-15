@@ -90,7 +90,7 @@ class Keyboards:
 
     @staticmethod
     def category(category, goods=False):
-        k = IKeyboard(row_width=1)
+        k = IKeyboard(row_width=2)
         k.insert(IButton(Texts.SearchButton,
                          callback_data=f"|Catalog:search:{category['GroupID']}"))
         for subcat in list(category['Subgroups'].values()):
@@ -347,3 +347,10 @@ class Keyboards:
         k.insert(IButton(Texts.No, callback_data=f"|just_hide|"))
         k.insert(IButton(Texts.Yes, callback_data=success_path))
         return k
+    
+    @staticmethod
+    def onChatInviteKeyboard(chat_id):
+        k = IKeyboard()
+        k.insert(IButton("🚀 Использовать чат по умолчанию", callback_data=f"|use_chat:{chat_id}"))
+        return k
+    

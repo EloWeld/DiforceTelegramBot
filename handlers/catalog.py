@@ -146,6 +146,7 @@ async def search_handler(m: Message, state: FSMContext):
     
     search_query = m.text
     cat_id = state_data.get("category_id")
+    cat = None
     
     goods = MDB.Goods.find(
         {"$text": {"$search": search_query}},
