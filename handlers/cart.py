@@ -144,7 +144,8 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             saved_card = cart.copy()
             order_data = OrderService.CreateWithBot(success_order_data, user)
             MDB.Orders.insert_one(order_data)
-            
+            if user['cart'] == {}:
+                await c.answer("😶 Корзина пуста!", show_alert = True)
             # Decreate good retails
             for cartItemID in user['cart']:
                 MDB.Goods.update_one(dict(ProductID=cartItemID), {"$inc": {"QtyInStore": -1 * user['cart'][cartItemID]['Quantity']}})
@@ -152,7 +153,8 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             user['cart'] = {}
             UserService.Update(user)
             
-            await c.message.answer("✅ Заказ сделан!")
+            await c.message.answer(f"✅ Заказ <code>#{success_order_data['CreatedOrderID']}</code> оформлен!")
+            await c.message.delete()
 
             try:
                 full_cart_summary = 0
@@ -175,7 +177,8 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             except Exception as e:
                 loguru.logger.error(f"Can't send message to user about order: {e}, {traceback.format_exc()}")
         else:
-            await c.message.answer("❌ Не удалось создать заказ!")
+            await c.message.answer("❌ Не удалось создать заказ в 1С!")
+            
     if action == "make_an_order(old)":
         goods = []
         for cartItem in list(user['cart'].values()):
