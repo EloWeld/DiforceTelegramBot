@@ -26,6 +26,7 @@ from services.textService import Texts
 from services.userService import UserService
 from utils import prepareGoodItemToSend
 
+
 # ▒▄█▀▀█░▐█▀▀─░▄█▀▄─▒▐█▀▀▄░▐█▀█░▐█░▐█
 # ▒▀▀█▄▄░▐█▀▀░▐█▄▄▐█▒▐█▒▐█░▐█──░▐████
 # ▒█▄▄█▀░▐█▄▄░▐█─░▐█▒▐█▀▄▄░▐█▄█░▐█░▐█
@@ -48,8 +49,7 @@ async def _(m: Message, state: FSMContext):
 
 @dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|Good:", state="*")
 async def _(c: CallbackQuery, state: FSMContext):
-    if state:
-        await state.finish()
+    global message_id_links
     action = c.data.split(":")[1]
     user = UserService.Get(c)
 
@@ -73,13 +73,18 @@ async def _(c: CallbackQuery, state: FSMContext):
     if action == "hide":
         await c.answer()
         mid = c.data.split(":")[2]
-        if mid != "None" and mid in message_id_links:
-            for x in message_id_links[mid]:
+        good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
+        if mid in good_pictures_msgs:
+            for good_msg in good_pictures_msgs[mid]:
                 try:
-                    await bot.delete_message(c.message.chat.id, int(x))
+                    await good_msg.delete()
                 except Exception as e:
                     pass
         await c.message.delete()
+        
+        if state:
+            await state.finish()
+    
 
 
 @dp.message_handler(state="PriceFilterState")

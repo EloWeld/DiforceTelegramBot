@@ -1,5 +1,6 @@
 
 import datetime
+import random
 import traceback
 from uuid import uuid4
 import aiogram
@@ -12,6 +13,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import  ChatTypeFilter
 from aiogram.types import ChatType, CallbackQuery, ContentType, MediaGroup, InputFile
 from services.goodsService import GoodsService
+from concurrent.futures import ThreadPoolExecutor
 
 from services.oneService import OneService
 
@@ -20,7 +22,8 @@ import base64
 from services.textService import Texts
 from services.userService import UserService
 from utils import prepareGoodItemToSend
-
+from PIL import Image
+from io import BytesIO
 
 MAX_IMAGES_IN_TELEGRAM_MEDIA_GROUP = 10
 LEFT_STEP = 20
@@ -34,6 +37,10 @@ async def _(c: CallbackQuery, state: FSMContext=None):
     
     if action in ["see_cat", "see_cat_goods"]:
         catID = action_params[0]
+        if catID == "":
+            categories = GoodsService.GetCategoriesTree()
+            await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
+            return
         loguru.logger.info(f"See catalog for category {catID}")
 
         cat = GoodsService.GetCategoryByID(catID)
@@ -53,15 +60,17 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             ))
             await state.update_data(req_id=req_id)
 
-        if action == "see_cat":
+        if action == "see_cat" and list(cat['Subgroups'].values()):
             await c.message.edit_text(Texts.CategoryMessage.format(category=cat,
                                                                    subcategories_count=len(cat['Subgroups']),
                                                                    category_goods_count=len(goods)),
                                       reply_markup=Keyboards.category(cat, bool(goods)))
-        else:
+        elif goods:
             await c.message.edit_text(Texts.CategoryGoodsMessage.format(category=cat,
                                                                     goods_count=len(goods)),
-                                  reply_markup=Keyboards.filteredGoods(cat, goods, req_id, head_cat=cat['GroupID']))
+                                  reply_markup=Keyboards.filteredGoods(cat, goods, req_id, head_cat=cat['HeadGroupID'] if not list(cat['Subgroups']) else cat['GroupID']))
+        else:
+            await c.answer("😶 В категории нет оптовых товаров!", show_alert=True)
     elif action == "see_good":
         goodID = action_params[0]
         good, images = GoodsService.GetGoodByID(goodID, with_images=True)
@@ -74,23 +83,40 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         
         # If has product image - send with image
         if images:
-            from PIL import Image
-            from io import BytesIO
-
-            images = list(set(images))
             media_group = MediaGroup()
-            for i, image in enumerate(images[:10]):
+            
+            def process_image(image):
                 b_img = base64.b64decode(image)
-                img_size = Image.open(BytesIO(b_img)).size
-                if img_size[0]*img_size[1] > 16000:
-                    media_group.attach_photo(wrap_media(b_img))
+                img = Image.open(BytesIO(b_img))
+                img_size = img.size
+                if img_size[0] * img_size[1] > 160000:
+                    return wrap_media(b_img) # Возвращаем обернутое изображение, если размеры соответствуют условию
+                else:
+                    return None # Возвращаем None, если размеры не соответствуют условию
+                
+            with ThreadPoolExecutor() as executor:
+                futures = []
+                for image in images[:10]: # Обрабатываем только первые 10 изображений
+                    future = executor.submit(process_image, image) # Отправляем изображение на обработку в отдельный поток
+                    futures.append(future)
 
+                for future in futures:
+                    result = future.result() # Ожидаем завершения обработки изображения
+                    if result:
+                        media_group.attach_photo(result) # Прикрепляем изображение к media_group, если результат не равен None
+                        
             try:
                 mid = await c.message.answer_media_group(media_group)
             except Exception as e:
                 loguru.logger.error(f"Cant send media group: {media_group}; e: {e}; traceback: {traceback.format_exc()}")
                 mid = []
-            keyboard = Keyboards.goodOptions(good, mid[0].message_id if mid else None)
+            
+            s = str(random.randint(0, 99999999999))
+            good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
+            good_pictures_msgs[s] = mid
+            await state.update_data(good_pictures_msgs=good_pictures_msgs)
+            
+            keyboard = Keyboards.goodOptions(good, s)
             await c.message.answer(messageText, reply_markup=keyboard)
         else:
             keyboard = Keyboards.goodOptions(good)
@@ -217,7 +243,7 @@ async def _(c: CallbackQuery, state: FSMContext):
     user = UserService.Get(c.from_user.id)
     request = MDB.GoodsRequests.find_one(dict(ID=req_id))
     category = GoodsService.GetCategoryByID(request['CategoryID'])
-    goods = list(MDB.Goods.find(dict(ProductID={"$in": request['GoodsIDs'], "QtyInStore": {"$gt": 0}})))
+    goods = list(MDB.Goods.find(dict(ProductID={"$in": request['GoodsIDs']}, QtyInStore={"$gt": 0})))
 
     if mode == "left":
         start_index = max(0, start_index - 20)

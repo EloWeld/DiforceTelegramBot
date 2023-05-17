@@ -176,7 +176,6 @@ class OneServiceBase:
                 images += [data[x]]
         loguru.logger.info(
             f"Get product images with sizes: {[len(x) for x in images]}")
-        images = [x for x in images if len(x) > 40000]
         if images == [""]:
             return []
         return images

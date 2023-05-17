@@ -102,6 +102,8 @@ async def order_info(c: CallbackQuery):
     elif options[1] == "logout_popup":
         await c.message.answer(Texts.LogoutPopupText, reply_markup=Keyboards.Popup("profile:logout"))        
         await c.answer()
+    elif options[1] == "hide":
+        await c.message.delete()
     elif options[1] == "logout":
         user_id = c.from_user.id
         user = UserService.Get(user_id)

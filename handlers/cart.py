@@ -144,6 +144,11 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             saved_card = cart.copy()
             order_data = OrderService.CreateWithBot(success_order_data, user)
             MDB.Orders.insert_one(order_data)
+            
+            # Decreate good retails
+            for cartItemID in user['cart']:
+                MDB.Goods.update_one(dict(ProductID=cartItemID), {"$inc": {"QtyInStore": -1 * user['cart'][cartItemID]['Quantity']}})
+            
             user['cart'] = {}
             UserService.Update(user)
             

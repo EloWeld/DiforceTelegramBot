@@ -33,6 +33,7 @@ class TextsMetaClass(type):
 🔖 Артикул: <b>{ProductArt}</b>
 
 💠 Наименование: <b>{ProductName}</b>
+🏷️ Производитель: <b>{Manufacturer}</b>
 🗄️ Склад: <b>Diforce ОПТОВЫЙ</b>
 🎨 Цвет: <b>{ColorEmoji} {ColorName}</b>
 
@@ -68,7 +69,7 @@ class TextsMetaClass(type):
         CartItemTextFormat="<code>[{Quantity} шт. * {OneQtyPrice} = {SummaryPrice} ₽] {ProductName}</code> ",
         CartItemMessage="\n\nВ корзине: {Quantity}",
         MakeAnOrderButton="🛎️ Оформить заказ",
-        ClearCart="🗑️ Отчистить козину",
+        ClearCart="🗑️ Очистить корзину",
         ClickRemovePopup="Чтобы убрать товар из корзины - нажмите \"{btn}\"",
         CartItemRemoved="✅Товар убран из корзины",
         DecrementButton="-1",

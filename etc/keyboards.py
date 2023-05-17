@@ -67,13 +67,14 @@ class Keyboards:
         
         if user['is_authenticated']:
             k.row(IButton(Texts.LogoutButton, callback_data=f"profile:logout_popup"))
+        k.row(IButton(Texts.HideButton, callback_data=f"profile:hide"))
         return k
     
     
     @staticmethod
     def OrderInfo(order):
         k = IKeyboard(row_width=2)
-        k.row(IButton("Повторить заказ", callback_data=f"repeat_order:{order.id}"))
+        # k.row(IButton("Повторить заказ", callback_data=f"repeat_order:{order.id}"))
         k.row(IButton("Назад", callback_data="profile:orders_history"))
         return k
 
@@ -170,7 +171,7 @@ class Keyboards:
         if cat:
             # Back button
             k.insert(IButton(Texts.QuitButton,
-                        callback_data=f"|Catalog:see_cat:{head_cat if head_cat else cat['GroupID']}"))
+                        callback_data=f"|Catalog:see_cat:{head_cat if head_cat is not None else cat['GroupID']}"))
         else:
             k.insert(IButton(Texts.QuitButton,
                         callback_data=f"|Catalog:main"))
