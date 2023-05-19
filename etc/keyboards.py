@@ -338,20 +338,6 @@ class Keyboards:
         return k
     
     @staticmethod
-    def ConfirmOrder(pay_method=None, deliv_method=None):
-        k = IKeyboard()
-        k.row(IButton("💰 Наличные" + ('✅' if pay_method == 'cash' else ''), callback_data=f"|Cart:choose_pay_method:cash"))
-        k.insert(IButton("💸 Перевод" + ('✅' if pay_method == 'transfer' else ''), callback_data=f"|Cart:choose_pay_method:transfer"))
-        k.insert(IButton("💳 Безнал" + ('✅' if pay_method == 'non_cash' else ''), callback_data=f"|Cart:choose_pay_method:non_cash"))
-        
-        k.row(IButton("🚗 Самовывоз", callback_data=f"|Cart:choose_deliv_method:self_pickup"))
-        k.insert(IButton("🚛 Доставка ", callback_data=f"|Cart:choose_deliv_method:delivery"))
-        
-        k.row(IButton("⭐ Оформить заказ", callback_data=f"|Cart:make_an_order_store"))
-        k.row(IButton(Texts.BackButton, callback_data=f"|Cart:back"))
-        return k
-    
-    @staticmethod
     def Popup(success_path: str):
         k = IKeyboard()
         k.insert(IButton(Texts.No, callback_data=f"|just_hide|"))
@@ -369,3 +355,36 @@ class Keyboards:
         k = IKeyboard()
         k.insert(IButton("➖ Скрыть ➖", callback_data=f"|Good:hide:{sessionID}"))
         return k
+    
+    
+    
+    @staticmethod
+    def ConfirmOrder(pay_method=None, deliv_method=None):
+        k = IKeyboard()
+        k.row(IButton("💰 Наличные" + (' ✅' if pay_method == 'cash' else ''), callback_data=f"|Cart:choose_pay_method:cash"))
+        k.insert(IButton("💸 Перевод" + (' ✅' if pay_method == 'transfer' else ''), callback_data=f"|Cart:choose_pay_method:transfer"))
+        k.insert(IButton("💳 Безнал" + (' ✅' if pay_method == 'non_cash' else ''), callback_data=f"|Cart:choose_pay_method:non_cash"))
+        
+        k.row(IButton("🚗 Самовывоз" + (' ✅' if deliv_method == 'self_pickup' else ''), callback_data=f"|Cart:choose_deliv_method:self_pickup"))
+        k.insert(IButton("🚛 Доставка" + (' ✅' if deliv_method == 'delivery' else ''), callback_data=f"|Cart:choose_deliv_method:delivery"))
+        
+        k.row(IButton("⭐ Оформить заказ", callback_data=f"|Cart:make_an_order_store"))
+        k.row(IButton(Texts.BackButton, callback_data=f"|Cart:back"))
+        return k
+    
+    @staticmethod
+    def DelivAddress(user, is_delivery, deliv_address_id=None):
+        k = IKeyboard()
+        for address in user['addresses']:
+            k.row(IButton(address['Name'] + (" ✅" if deliv_address_id == address['ID'] else ''), callback_data=f"|Cart:choose_address:{address['ID']}"))
+        k.row(IButton("➕ Добавить адресс", callback_data=f"|Cart:add_deliv_address"))
+        k.row(IButton("☑️ Выбрать метод доставки курьером" if not is_delivery else "✅ Выбрана доставка курьером", callback_data=f"|Cart:choose_deliv_method:delivery_true"))
+        k.row(IButton(Texts.BackButton, callback_data=f"|Cart:confirm_order"))
+        return k
+    
+    @staticmethod
+    def back(path):
+        k = IKeyboard()
+        k.row(IButton(Texts.BackButton, callback_data=path))
+        return k
+        

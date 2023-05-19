@@ -21,6 +21,7 @@ class UserService:
             is_authenticated=False,
             opt=None,
             roles=["user"],
+            addresses=[],
             balance=0.0,
             cart={},
             last_action=datetime.datetime.now(),

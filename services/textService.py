@@ -3,6 +3,11 @@ from loader import MDB
 
 savedTexts = {}
 
+verbose = {None: "Не выбрано", "non_cash": "💳 Безнал", "cash":"💰 Наличные",
+"transfer":"💸 Перевод",
+"self_pickup":"🚗 Самовывоз",
+"delivery":"🚛 Доставка"
+}
 
 class TextsMetaClass(type):
 
