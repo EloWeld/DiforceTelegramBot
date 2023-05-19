@@ -277,7 +277,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             
                 
         if can_order:
-            await c.message.edit_text("✅ Все товары из корзины есть на складе в достаточном количестве, подтвердите создание заказа", reply_markup=Keyboards.ConfirmOrder())
+            await c.message.edit_text("✅ Все товары из корзины есть на складе в достаточном количестве. Укажите метод оплаты и доставки и подтвердите создание заказа", reply_markup=Keyboards.ConfirmOrder())
        
     if action == "back":
         await showCart(user)

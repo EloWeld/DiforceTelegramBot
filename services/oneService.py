@@ -162,9 +162,10 @@ class OneServiceBase:
         return r.json()
 
     def getGoodImages(self, good_id):
-        r = self.session.get(self.base_endpoint + "getProductImages", params={
+        p = {
             "ProductID": good_id,
-        })
+        }
+        r = self.session.get(self.base_endpoint + "getProductImages", params=p)
 
         if r.status_code != 200:
             loguru.logger.error(

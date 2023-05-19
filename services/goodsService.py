@@ -50,7 +50,7 @@ class GoodsService:
                     if cat3 == category_id:
                         return rdotdict(catalog[cat1]['Subgroups'][cat2]['Subgroups'][cat3])
         return None
-
+    
     @staticmethod
     def GetGoodByID(good_id, with_images=False) -> Union[Tuple[dotdict, list], dotdict]:
         """

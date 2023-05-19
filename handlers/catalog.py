@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import datetime
 import traceback
 from uuid import uuid4
@@ -8,7 +9,7 @@ from etc.helpers import rdotdict, wrap_media
 from etc.keyboards import Keyboards
 from loader import MDB, dp, bot, Consts, message_id_links
 from io import BytesIO
-
+from PIL import Image
 from fuzzywuzzy import fuzz
 
 from aiogram import Bot, types
@@ -24,7 +25,7 @@ from dotdict import dotdict
 
 from services.textService import Texts
 from services.userService import UserService
-from utils import prepareGoodItemToSend
+from utils import cutText, prepareGoodItemToSend
 
 
 # ▒▄█▀▀█░▐█▀▀─░▄█▀▄─▒▐█▀▀▄░▐█▀█░▐█░▐█
@@ -69,13 +70,58 @@ async def _(c: CallbackQuery, state: FSMContext):
         await state.set_state("FoundItCheaper")
         ans_msg = await c.message.answer(Texts.FoundCheaperMessage, reply_markup=Keyboards.foundCheaperMenu())
         await state.update_data(goodID=goodID, msgID=ans_msg.message_id)
+    
+    if action == "see_other_photos":
+        await c.answer("📷 Фотографии загружаются...")
+        goodID = c.data.split(":")[2]
+        mg = MediaGroup()
+        good, images = GoodsService.GetGoodByID(goodID, True)
+        if images:
+            media_group = MediaGroup()
+            
+            def process_image(image):
+                b_img = base64.b64decode(image)
+                img = Image.open(BytesIO(b_img))
+                img_size = img.size
+                if img_size[0] * img_size[1] > 160000:
+                    return wrap_media(b_img) # Возвращаем обернутое изображение, если размеры соответствуют условию
+                else:
+                    return None # Возвращаем None, если размеры не соответствуют условию
+                
+            with ThreadPoolExecutor() as executor:
+                futures = []
+                for image in images[:10]: # Обрабатываем только первые 10 изображений
+                    future = executor.submit(process_image, image) # Отправляем изображение на обработку в отдельный поток
+                    futures.append(future)
 
+                for future in futures:
+                    result = future.result() # Ожидаем завершения обработки изображения
+                    if result:
+                        media_group.attach_photo(result) # Прикрепляем изображение к media_group, если результат не равен None
+                        
+            try:
+                mid = await c.message.answer_media_group(media_group)
+            except Exception as e:
+                loguru.logger.error(f"Cant send media group: {media_group}; e: {e}; traceback: {traceback.format_exc()}")
+            sessionID = c.data.split(":")[3]
+            sessionID2 = str(uuid4())[:10]
+            txtMsg = await c.message.answer(f"📷⤴️ Дополнительные фотографии к товару <b>{cutText(good['ProductName'], 50)}</b> <i>({goodID})</i>", reply_markup=Keyboards.hideAdditionalPhotos(sessionID2))
+            
+            additionalInfoMessages = mid + [txtMsg]
+            
+            good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
+            good_pictures_msgs[sessionID2] = additionalInfoMessages
+            if sessionID in good_pictures_msgs:
+                good_pictures_msgs[sessionID].extend(additionalInfoMessages)
+            await state.update_data(good_pictures_msgs=good_pictures_msgs)
+
+    
     if action == "hide":
         await c.answer()
         mid = c.data.split(":")[2]
         good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
         if mid in good_pictures_msgs:
-            for good_msg in good_pictures_msgs[mid]:
+            for good_msg in good_pictures_msgs[mid][::-1]:
                 try:
                     await good_msg.delete()
                 except Exception as e:

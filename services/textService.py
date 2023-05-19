@@ -45,6 +45,7 @@ class TextsMetaClass(type):
 """,
         # Good Buttons
         AddToCartButton="🛒 Добавить в корзину",
+        ShowPictures="📷 Показать ещё фото...",
         FoundCheaperButton="📉 Нашёл дешевле",
         StoreQuantsButton="📦 Наличие на складах",
 

@@ -213,7 +213,7 @@ class Keyboards:
         
 
     @staticmethod
-    def goodOptions(good, media_group_message_id: Union[int, None]=None):
+    def goodOptions(good, media_group_message_id=None):
         k = IKeyboard(row_width=1)
         k.row(IButton(Texts.AddToCartButton,
               callback_data=f"|Good:add_to_cart:{good['ProductID']}"))
@@ -221,6 +221,8 @@ class Keyboards:
               callback_data=f"|Good:found_cheaper:{good['ProductID']}"))
         # k.row(IButton(Texts.StoreQuantsButton,
         #       callback_data=f"|Good:store_quants:{good['ProductID']}"))
+        k.row(IButton(Texts.ShowPictures,
+              callback_data=f"|Good:see_other_photos:{good['ProductID']}:{media_group_message_id}"))
         k.row(IButton(Texts.HideButton, callback_data=f"|Good:hide:{media_group_message_id}"))
         return k
 
@@ -336,8 +338,15 @@ class Keyboards:
         return k
     
     @staticmethod
-    def ConfirmOrder():
+    def ConfirmOrder(pay_method=None, deliv_method=None):
         k = IKeyboard()
+        k.row(IButton("💰 Наличные" + ('✅' if pay_method == 'cash' else ''), callback_data=f"|Cart:choose_pay_method:cash"))
+        k.insert(IButton("💸 Перевод" + ('✅' if pay_method == 'transfer' else ''), callback_data=f"|Cart:choose_pay_method:transfer"))
+        k.insert(IButton("💳 Безнал" + ('✅' if pay_method == 'non_cash' else ''), callback_data=f"|Cart:choose_pay_method:non_cash"))
+        
+        k.row(IButton("🚗 Самовывоз", callback_data=f"|Cart:choose_deliv_method:self_pickup"))
+        k.insert(IButton("🚛 Доставка ", callback_data=f"|Cart:choose_deliv_method:delivery"))
+        
         k.row(IButton("⭐ Оформить заказ", callback_data=f"|Cart:make_an_order_store"))
         k.row(IButton(Texts.BackButton, callback_data=f"|Cart:back"))
         return k
@@ -355,3 +364,8 @@ class Keyboards:
         k.insert(IButton("🚀 Использовать чат по умолчанию", callback_data=f"|use_chat:{chat_id}"))
         return k
     
+    @staticmethod
+    def hideAdditionalPhotos(sessionID):
+        k = IKeyboard()
+        k.insert(IButton("➖ Скрыть ➖", callback_data=f"|Good:hide:{sessionID}"))
+        return k

@@ -1,17 +1,19 @@
 
+import copy
 import datetime
 import random
 import traceback
+from typing import List
 from uuid import uuid4
 import aiogram
 import loguru
 from etc.helpers import wrap_media
 from etc.keyboards import Keyboards
-from loader import MDB, dp, message_id_links
+from loader import MDB, dp, message_id_links, bot
 
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import  ChatTypeFilter
-from aiogram.types import ChatType, CallbackQuery, ContentType, MediaGroup, InputFile
+from aiogram.types import ChatType, CallbackQuery, ContentType, MediaGroup, InputFile, Message, InputMediaPhoto
 from services.goodsService import GoodsService
 from concurrent.futures import ThreadPoolExecutor
 
@@ -28,6 +30,32 @@ from io import BytesIO
 MAX_IMAGES_IN_TELEGRAM_MEDIA_GROUP = 10
 LEFT_STEP = 20
 RIGHT_STEP = 20
+
+async def attach_photo(goodID, good_pic_messages: List[Message]):
+    images = OneService.getGoodImages(goodID)
+    
+
+    # If has product image - send with image
+    if images:
+        true_images = []
+        
+        def process_image(image):
+            b_img = base64.b64decode(image)
+            img = Image.open(BytesIO(b_img))
+            img_size = img.size
+            if img_size[0] * img_size[1] > 160000:
+                return wrap_media(b_img) # Возвращаем обернутое изображение, если размеры соответствуют условию
+            else:
+                return None # Возвращаем None, если размеры не соответствуют условию
+            
+        for img in images:
+            last_processed_image = process_image(img)
+            if last_processed_image:
+                true_images += [last_processed_image]
+                if len(true_images) >= 2:
+                    break
+        for good_pic_message in good_pic_messages:   
+            await good_pic_message.edit_media(true_images.pop())
 
 @dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|Catalog:", state="*")
 async def _(c: CallbackQuery, state: FSMContext=None):
@@ -73,54 +101,30 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             await c.answer("😶 В категории нет оптовых товаров!", show_alert=True)
     elif action == "see_good":
         goodID = action_params[0]
-        good, images = GoodsService.GetGoodByID(goodID, with_images=True)
+        good = GoodsService.GetGoodByID(goodID)
         good['Price'] = GoodsService.GetTargetPrice(user, good)
         good['ColorName'] = good['ColorName'].capitalize()
         
         messageText = prepareGoodItemToSend(good)
         
         loguru.logger.info(f"See good: {goodID}")
+        await c.answer()
+        sessionID = str(uuid4())[:9]
+        keyboard = Keyboards.goodOptions(good, media_group_message_id=sessionID)
         
-        # If has product image - send with image
-        if images:
-            media_group = MediaGroup()
-            
-            def process_image(image):
-                b_img = base64.b64decode(image)
-                img = Image.open(BytesIO(b_img))
-                img_size = img.size
-                if img_size[0] * img_size[1] > 160000:
-                    return wrap_media(b_img) # Возвращаем обернутое изображение, если размеры соответствуют условию
-                else:
-                    return None # Возвращаем None, если размеры не соответствуют условию
-                
-            with ThreadPoolExecutor() as executor:
-                futures = []
-                for image in images[:10]: # Обрабатываем только первые 10 изображений
-                    future = executor.submit(process_image, image) # Отправляем изображение на обработку в отдельный поток
-                    futures.append(future)
+        # Ooooh fuck... saving in state message ids for goods to delete messages in future
+        mg = MediaGroup()
+        mg.attach_photo(InputFile("src/loading.png"))
+        mg.attach_photo(InputFile("src/loading.png"))
+        good_pic_messages: List[Message] = await c.message.answer_media_group(mg, disable_notification=True)
+        good_message: Message = await c.message.answer(text=messageText, reply_markup=keyboard)
+        
+        good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
+        good_pictures_msgs[sessionID] = good_pic_messages + [good_message]
+        await state.update_data(good_pictures_msgs=good_pictures_msgs)
 
-                for future in futures:
-                    result = future.result() # Ожидаем завершения обработки изображения
-                    if result:
-                        media_group.attach_photo(result) # Прикрепляем изображение к media_group, если результат не равен None
-                        
-            try:
-                mid = await c.message.answer_media_group(media_group)
-            except Exception as e:
-                loguru.logger.error(f"Cant send media group: {media_group}; e: {e}; traceback: {traceback.format_exc()}")
-                mid = []
-            
-            s = str(random.randint(0, 99999999999))
-            good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
-            good_pictures_msgs[s] = mid
-            await state.update_data(good_pictures_msgs=good_pictures_msgs)
-            
-            keyboard = Keyboards.goodOptions(good, s)
-            await c.message.answer(messageText, reply_markup=keyboard)
-        else:
-            keyboard = Keyboards.goodOptions(good)
-            await c.message.answer(messageText, reply_markup=keyboard)
+        await attach_photo(goodID, good_pic_messages)
+        
     elif action == "cancel_search":
         if state:
             await state.finish()

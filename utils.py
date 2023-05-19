@@ -35,11 +35,14 @@ def cutText(text: str, limit: int):
     else:
         return text
     
+
 def prepareGoodItemToSend(good):
     """Prepare cart item message text for sending."""
     good['PriceType'] = "МЕЛКИЙ ОПТ" if good['Price'] == good['PriceOptSmall'] else "СРЕДНИЙ ОПТ" if good['Price'] == good['PriceOptMiddle'] else "КРУПНЫЙ ОПТ" if good['Price'] == good['PriceOptLarge'] else "РОЗНИЦА"
     good['Price'] = f"{good['Price']:,}".replace(',', ' ')
+    good['ProductDescription'] = cutText(good['ProductDescription'], 3500)
     messageText = Texts.GoodCard.format(**good)
+    print(messageText)
     return messageText
     
     
