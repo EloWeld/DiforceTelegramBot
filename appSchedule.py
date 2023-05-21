@@ -9,6 +9,7 @@ from dotdict import dotdict
 import schedule
 
 from services.oneService import OneService
+from utils import format_phone_number
 
 FORBIDDEN_GROUP_IDS = [
     "ЦБ000000011",
@@ -68,6 +69,10 @@ async def diforceUsersSync():
     loguru.logger.info("[DIFORCE-USERS]: Start sync users")
     try:
         users = OneService.getUsers()
+        # Change users objects
+        for x_user in users:
+            if x_user['Phone']:
+                x_user['Phone'] = format_phone_number(x_user['Phone'])
         MDB.DiforceUsers.delete_many({})
         for x in users:
             MDB.DiforceUsers.insert_one(x)

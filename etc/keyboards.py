@@ -79,14 +79,20 @@ class Keyboards:
         return k
 
     @staticmethod
-    def catalog(categories):
-        k = IKeyboard(row_width=1)
-        k.insert(IButton(Texts.SearchButton,
+    def catalog(categories, start_ind=0):
+        k = IKeyboard(row_width=3)
+        k.row(IButton(Texts.SearchButton,
                          callback_data="|Catalog:search:None"))
-        k.row()
-        for catID in categories:
-            k.insert(IButton(categories[catID]['GroupName'],
+        for catID in categories[start_ind:start_ind+20]:
+            k.row(IButton(categories[catID]['GroupName'],
                              callback_data=f"|Catalog:see_cat:{catID}"))
+            
+        if len(categories) > 20:
+            k.row()
+            if start_ind < len(categories) - 20:
+                k.insert(IButton("➡️", callback_data=f"|Catalog:root_categories:{start_ind+20}"))
+            if start_ind > 0:
+                k.insert(IButton("⬅️", callback_data=f"|Catalog:root_categories:{start_ind-20}"))
         return k
 
     @staticmethod
@@ -202,10 +208,12 @@ class Keyboards:
         return k
     
     @staticmethod
-    def BrandFilter(all_brands, selected_brands):
+    def BrandFilter(all_brands, selected_brands, req: None):
         k = IKeyboard()
         for x in all_brands:
             k.insert(IButton(('☑️' if x not in selected_brands else '✅ ') + x, callback_data=f"|Catalog:brand_filter_choose:{x}"))
+        if req and 'BrandFilter' in req['AppliedFilters']:
+            k.row(IButton(Texts.CancelFilter, callback_data=f"|Catalog:cancel_filter:brand"))
         k.row(IButton(Texts.Show, callback_data=f"|Catalog:brand_filter_show"))
         k.row(IButton(Texts.Cancel, callback_data=f"|Catalog:cancel_filter:brand"))
         return k
@@ -242,7 +250,7 @@ class Keyboards:
         
         k.insert(IButton(Texts.ClearCart, callback_data=f"|Cart:clear_all"))
         k.insert(IButton(Texts.MakeAnOrderButton,
-              callback_data=f"|Cart:make_an_order"))
+              callback_data=f"|OrderActions:make_an_order"))
         k.row(IButton(Texts.HideButton, callback_data=f"|Cart:hide"))
         return k
 
@@ -332,7 +340,7 @@ class Keyboards:
     def ChooseStore(stores: dict):
         k = IKeyboard()
         for store in list(stores.values()):
-            k.row(IButton(store['store_name'], callback_data=f"|Cart:make_an_order_store:{store['store_id']}"))
+            k.row(IButton(store['store_name'], callback_data=f"|OrderActions:make_an_order_store:{store['store_id']}"))
             
         k.row(IButton(Texts.BackButton, callback_data=f"|Cart:back"))
         return k
@@ -361,14 +369,14 @@ class Keyboards:
     @staticmethod
     def ConfirmOrder(pay_method=None, deliv_method=None):
         k = IKeyboard()
-        k.row(IButton("💰 Наличные" + (' ✅' if pay_method == 'cash' else ''), callback_data=f"|Cart:choose_pay_method:cash"))
-        k.insert(IButton("💸 Перевод" + (' ✅' if pay_method == 'transfer' else ''), callback_data=f"|Cart:choose_pay_method:transfer"))
-        k.insert(IButton("💳 Безнал" + (' ✅' if pay_method == 'non_cash' else ''), callback_data=f"|Cart:choose_pay_method:non_cash"))
+        k.row(IButton("💰 Наличные" + (' ✅' if pay_method == 'cash' else ''), callback_data=f"|OrderActions:choose_pay_method:cash"))
+        k.insert(IButton("💸 Перевод" + (' ✅' if pay_method == 'transfer' else ''), callback_data=f"|OrderActions:choose_pay_method:transfer"))
+        k.insert(IButton("💳 Безнал" + (' ✅' if pay_method == 'non_cash' else ''), callback_data=f"|OrderActions:choose_pay_method:non_cash"))
         
-        k.row(IButton("🚗 Самовывоз" + (' ✅' if deliv_method == 'self_pickup' else ''), callback_data=f"|Cart:choose_deliv_method:self_pickup"))
-        k.insert(IButton("🚛 Доставка" + (' ✅' if deliv_method == 'delivery' else ''), callback_data=f"|Cart:choose_deliv_method:delivery"))
+        k.row(IButton("🚗 Самовывоз" + (' ✅' if deliv_method == 'self_pickup' else ''), callback_data=f"|OrderActions:choose_deliv_method:self_pickup"))
+        k.insert(IButton("🚛 Доставка" + (' ✅' if deliv_method == 'delivery' else ''), callback_data=f"|OrderActions:choose_deliv_method:delivery"))
         
-        k.row(IButton("⭐ Оформить заказ", callback_data=f"|Cart:make_an_order_store"))
+        k.row(IButton("⭐ Оформить заказ", callback_data=f"|OrderActions:make_an_order_store"))
         k.row(IButton(Texts.BackButton, callback_data=f"|Cart:back"))
         return k
     
@@ -376,10 +384,10 @@ class Keyboards:
     def DelivAddress(user, is_delivery, deliv_address_id=None):
         k = IKeyboard()
         for address in user['addresses']:
-            k.row(IButton(address['Name'] + (" ✅" if deliv_address_id == address['ID'] else ''), callback_data=f"|Cart:choose_address:{address['ID']}"))
-        k.row(IButton("➕ Добавить адресс", callback_data=f"|Cart:add_deliv_address"))
-        k.row(IButton("☑️ Выбрать метод доставки курьером" if not is_delivery else "✅ Выбрана доставка курьером", callback_data=f"|Cart:choose_deliv_method:delivery_true"))
-        k.row(IButton(Texts.BackButton, callback_data=f"|Cart:confirm_order"))
+            k.row(IButton(address['Name'] + (" ✅" if deliv_address_id == address['ID'] else ''), callback_data=f"|OrderActions:choose_address:{address['ID']}"))
+        k.row(IButton("➕ Добавить адресс", callback_data=f"|OrderActions:add_deliv_address"))
+        k.row(IButton("☑️ Выбрать метод доставки курьером" if not is_delivery else "✅ Выбрана доставка курьером", callback_data=f"|OrderActions:choose_deliv_method:delivery_true"))
+        k.row(IButton(Texts.BackButton, callback_data=f"|OrderActions:confirm_order"))
         return k
     
     @staticmethod

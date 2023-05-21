@@ -12,6 +12,7 @@ from services.goodsService import GoodsService
 from services.oneService import OneService
 from services.textService import Texts
 from services.userService import UserService
+from utils import format_phone_number
 
 # задание состояний FSM
 class Form(StatesGroup):
@@ -40,7 +41,7 @@ async def process_phone_email(message: types.Message, state: FSMContext):
         if "@" in message.text:
             data['email'] = message.text
         else:
-            data['phone'] = message.text
+            data['phone'] = format_phone_number(message.text)
 
         # отправляем следующий вопрос
         await message.answer("Введите полное наименование организации/физ лица:")
@@ -78,10 +79,10 @@ async def process_inn(message: types.Message, state: FSMContext):
             if 'inn+kpp' in data and 'INN' in d_user:
                 cond = cond and data['inn+kpp'].split('+')[0] == d_user['INN']
             if 'full_name' in data and 'FullName' in d_user:
-                prob = fuzz.partial_ratio(data['full_name'].lower().replace('.', ''), d_user['FullName'].lower().replace('.', ''))
+                prob = fuzz.partial_ratio(format_fio(data['full_name']), format_fio(d_user['FullName']))
                 cond = cond and  prob > 90
             if 'phone' in data and 'Phone' in d_user:
-                cond = cond and data['phone'].replace(' ', '').replace('+7', '8') == d_user['Phone'].replace(' ', '').replace('+7', '8')
+                cond = cond and data['phone'] == d_user['Phone']
             if 'email' in data and 'Email' in d_user:
                 cond = cond and data['email'].replace(' ', '') == d_user['Email'].replace(' ', '').replace('>', '').replace('<', '')
                 
@@ -105,15 +106,15 @@ async def process_inn(message: types.Message, state: FSMContext):
             
             await message.answer(f"✅ Спасибо! Вы идентифицированы!", reply_markup=Keyboards.startMenu(user))
             
-            if user['diforce_data']['ContractType'] == "МЕЛКООПТОВААЯ":
+            if user['diforce_data']['ContractType'] in ["МЕЛКООПТОВААЯ", "ОПТОВАЯ"]:
                 user['roles'] = list(set(user['roles']+["SmallOpt"]))
                 user['opt'] = "SmallOpt"
-            if user['diforce_data']['ContractType'] == "ОПТОВАЯ":
-                user['roles'] = list(set(user['roles']+["SmallOpt"]))
-                user['opt'] = "SmallOpt"
+            if user['diforce_data']['ContractType'] in ["СПЕЦ ЦЕНА ОПТОВАЯ"]:
+                user['roles'] = list(set(user['roles']+["MiddleOpt"]))
+                user['opt'] = "MiddleOpt"
             if user['diforce_data']['ContractType'] == "КРУПНЫЙ ОПТ":
-                user['roles'] = list(set(user['roles']+["SmallOpt"]))
-                user['opt'] = "SmallOpt"
+                user['roles'] = list(set(user['roles']+["LargeOpt"]))
+                user['opt'] = "LargeOpt"
             
             UserService.Update(user)
         else:

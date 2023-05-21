@@ -6,4 +6,6 @@ from .commands import *
 from .chat import *
 from .profile import *
 from .admin import *
+from .orders import *
 from .identification import *
+from .good import *

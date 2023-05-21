@@ -1,3 +1,4 @@
+import re
 import loguru
 from loader import MDB, bot
 from services.textService import Texts
@@ -54,3 +55,44 @@ def prepareCartItemToSend(good, cartItem):
     messageText = Texts.GoodCard.format(
         **good) + Texts.CartItemMessage.format(**cartItem)
     return messageText
+
+def format_phone_number(phone_number):
+    # Удаление всех символов, кроме цифр
+    phone_number = ''.join(filter(str.isdigit, phone_number))
+
+    # Проверка длины номера телефона
+    if len(phone_number) == 10:
+        # Добавление префикса "+7"
+        phone_number = "+7" + phone_number
+    elif len(phone_number) == 11:
+        # Проверка префикса и замена, если требуется
+        if phone_number.startswith("8"):
+            phone_number = "+7" + phone_number[1:]
+        elif not phone_number.startswith("+7"):
+            phone_number = "+7" + phone_number[1:]
+    elif len(phone_number) == 12:
+        # Проверка префикса и замена, если требуется
+        if phone_number.startswith("8"):
+            phone_number = "+7" + phone_number[2:]
+        elif not phone_number.startswith("+7"):
+            phone_number = "+7" + phone_number[2:]
+    
+    return phone_number
+
+def format_fio(fio):
+    fio = fio.upper()
+    # Удаление слов
+    words_to_remove = ["ИП", "ИНДИВИДУАЛЬНЫЙ ПРЕДПРИНЕМАТЕЛЬ", "ООО", "ОБЩЕСТВО С ОГРАНИЧЕНОЙ ОТВЕТСТВЕННОСТЬЮ"]
+    pattern_words = r'\b(?:{})\b'.format('|'.join(words_to_remove))
+    fio = re.sub(pattern_words, '', fio)
+
+    # Удаление кавычек, знаков препинания, специальных символов (кроме пробела)
+    pattern_symbols = r'[^\w\s]'
+    fio = re.sub(pattern_symbols, '', fio)
+
+    # Удаление двойных пробелов
+    fio = re.sub(r'\s+', ' ', fio)
+
+    # Удаление пробелов по краям
+    fio = fio.strip()
+    return fio

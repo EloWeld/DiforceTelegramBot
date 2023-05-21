@@ -63,6 +63,12 @@ async def _(c: CallbackQuery, state: FSMContext=None):
     action, *action_params = c.data.split(":")[1:]
     user = UserService.Get(c.from_user.id)
     
+    if action == "root_categories":
+        start_index = int(action_params)
+        categories = GoodsService.GetCategoriesTree()
+
+        await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories, start_index))
+    
     if action in ["see_cat", "see_cat_goods"]:
         catID = action_params[0]
         if catID == "":
@@ -158,8 +164,9 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         else:  # action == "brand_filter"
             req_id = stateData.get('req_id', None)
 
+            req = MDB.GoodsRequests.find_one(dict(ID=req_id))
+            
             if req_id is not None:
-                req = MDB.GoodsRequests.find_one(dict(ID=req_id))
                 goods = list(MDB.Goods.find(dict(ProductID={"$in":req['GoodsIDs']})))
             else:
                 goods = list(MDB.Goods.find(dict(GroupID=category_group_id)))
@@ -167,7 +174,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             selected_brands = stateData.get("selected_brands", [])
             all_brands = set(x['Manufacturer'] for x in goods)
 
-            await c.message.answer(Texts.BrandFilterMessage, reply_markup=Keyboards.BrandFilter(all_brands, selected_brands))  
+            await c.message.answer(Texts.BrandFilterMessage, reply_markup=Keyboards.BrandFilter(all_brands, selected_brands, req))  
             await state.set_state("BrandFilterState")
             await state.update_data(selected_brands=selected_brands, all_brands=all_brands, category_group_id=category_group_id)
 
@@ -177,13 +184,14 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         choosen_brand = action_params[0]
         selected_brands = stateData.get("selected_brands", [])
         all_brands = stateData.get("all_brands", [])
+        req = MDB.GoodsRequests.find_one(dict(ID=stateData.get('req_id', None)))
 
         if choosen_brand in selected_brands:
             selected_brands.remove(choosen_brand)
         else:
             selected_brands.append(choosen_brand)
 
-        await c.message.edit_text(Texts.BrandFilterMessage, reply_markup=Keyboards.BrandFilter(all_brands, selected_brands))  
+        await c.message.edit_text(Texts.BrandFilterMessage, reply_markup=Keyboards.BrandFilter(all_brands, selected_brands, req))  
         await state.update_data(selected_brands=selected_brands)
         await c.answer()
 
@@ -212,7 +220,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             goods = list(MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']})))
             if selected_brands:
                 goods = [x for x in goods if x['Manufacturer'] in selected_brands]
-            req['GoodsIDs'] = [x['ProductID'] for x in goods]
+            # req['GoodsIDs'] = [x['ProductID'] for x in goods]
             req['AppliedFilters']['BrandFilter'] = {"Brands": selected_brands}
             MDB.GoodsRequests.update_one(dict(ID=stateData['req_id']), {"$set": req})
 
