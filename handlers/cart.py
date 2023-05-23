@@ -265,7 +265,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
                 formatted_summary = f"Общая стоимость корзины: <code>{full_cart_summary:,}₽</code>".replace(
                     ',', ' ')
                 order_text += formatted_summary
-                order_text += f"\n\nАдрес доставки: <code>{order_data['DeliveryAddress']}</code>\n"
+                order_text += f"\n\nАдрес доставки: <code>{order_data.get('DeliveryAddress', 'Не указан')}</code>\n"
                 order_text += f"Способ доставки: <code>{verbose[order_data['DeliveryMethod']]}</code>\n"
                 order_text += f"Способ оплаты: <code>{verbose[order_data['PayMethod']]}</code>\n"
 
@@ -356,17 +356,12 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         cartItems = user['cart']
         for key, cartItem in cartItems.items():
             good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
-            try:
-                good['QtyInStore'] = [x for x in good['QuantityInStores']
-                                      if x['store_id'] == "000000001"][0]['quantity']
-            except Exception:
-                good['QtyInStore'] = 0
 
             if good:
                 cartItem['Price'] = GoodsService.GetTargetPrice(user, good)
                 goods.append(good)
 
-            cartItem['good_item'] = good if good else None
+            cartItem['good_item'] = good if good is not None else dict(QtyInStore=0)
 
         can_order = True
         for key, cItem in cartItems.items():

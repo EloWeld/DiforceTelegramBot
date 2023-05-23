@@ -35,20 +35,22 @@ class GoodsService:
         return result
 
     @staticmethod
-    def GetCategoryByID(category_id) -> Optional[rdotdict]:
+    def GetCategoryByID(category_id, subgroups=[]) -> Optional[rdotdict]:
+        if category_id is None:
+            return None
         """
         Получает информацию о категории товаров по её идентификатору `category_id` и возвращает объект `rdotdict`, содержащий информацию о категории, или `None`, если категория не найдена.
         """
         catalog = MDB.Settings.find_one(dict(id="Catalog"))['catalog']
-        for cat1 in catalog:
-            if cat1 == category_id:
-                return rdotdict(catalog[cat1])
-            for cat2 in catalog[cat1]['Subgroups']:
-                if cat2 == category_id:
-                    return rdotdict(catalog[cat1]['Subgroups'][cat2])
-                for cat3 in catalog[cat1]['Subgroups'][cat2]['Subgroups']:
-                    if cat3 == category_id:
-                        return rdotdict(catalog[cat1]['Subgroups'][cat2]['Subgroups'][cat3])
+        if category_id in catalog:
+            return rdotdict(catalog[category_id])
+
+        for group_id in catalog:
+            subgroups = catalog[group_id]['Subgroups']
+            if subgroups:
+                result = GoodsService.GetCategoryByID(category_id, subgroups)
+                if result:
+                    return result
         return None
     
     @staticmethod

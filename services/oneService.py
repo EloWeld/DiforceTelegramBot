@@ -116,7 +116,7 @@ class OneServiceBase:
             r = self.session.get(self.base_endpoint+"getCatalog", params={
                 "Image": 1 if with_image else 0,
                 "ProductID": good_id
-            }, timeout=REQUESTS_TIMEOUT*2)
+            }, timeout=REQUESTS_TIMEOUT)
             if r.status_code != 200:
                 loguru.logger.error(
                     f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")

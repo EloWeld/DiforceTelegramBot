@@ -26,15 +26,68 @@ from services.userService import UserService
 from utils import prepareGoodItemToSend
 from PIL import Image
 from io import BytesIO
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
 
 MAX_IMAGES_IN_TELEGRAM_MEDIA_GROUP = 10
 LEFT_STEP = 20
 RIGHT_STEP = 20
 
+def search_objects(objects_list, search_query):
+    lemmatizer = WordNetLemmatizer()
+    try:
+        tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query)]
+    except LookupError as e:
+        loguru.logger.error("LookupError")
+        nltk.download('punkt')
+        nltk.download('wordnet')
+        tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query)]
+    results = []
+    for obj in objects_list:
+        tokens_obj = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(obj['ProductName'])]
+        score = 0
+        for token in tokens_query:
+            if token in tokens_obj:
+                score += 1
+        if score > 0:
+            results.append((obj, score))
+    r = sorted(results, key=lambda x: x[1], reverse=True)
+    return [x[0] for x in r]
+
+
+def apply_req(req: dict, user):
+    goods = MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']}, QtyInStore={"$gt": 0}))
+    if 'PriceFilter' in req['AppliedFilters']:
+        pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
+        min_price = req['AppliedFilters']['PriceFilter']['min_price']
+        max_price = req['AppliedFilters']['PriceFilter']['max_price']
+        goods = [x for x in goods if min_price  <= x[pr] <= max_price]
+        
+    if 'BrandFilter' in req['AppliedFilters']:
+        brands = req['AppliedFilters']['BrandFilter']['Brands']
+        goods = [x for x in goods if x['Manufacturer'] in brands]
+        
+    if 'QuerySearch' in req['AppliedFilters']:
+        search_query = req['AppliedFilters']['QuerySearch']
+        goods = search_objects(goods, search_query)
+    return goods
+\
+def get_category_tree(group, group_ids, catalog):
+    """Функция для получения списка GroupID для всех категорий"""
+    group_ids.append(group['GroupID'])
+    if group['GroupID'] in catalog:
+        subgroups = catalog[group['GroupID']]['Subgroups']
+        for subgroup_id in subgroups:
+            subgroup = subgroups[subgroup_id]
+            # рекурсивно обходим дерево для каждой подкатегории
+            get_category_tree(subgroup, group_ids, catalog)
+    return group_ids
+
+
 async def attach_photo(goodID, good_pic_messages: List[Message]):
     images = OneService.getGoodImages(goodID)
     
-
     # If has product image - send with image
     if images:
         true_images = []
@@ -65,23 +118,25 @@ async def _(c: CallbackQuery, state: FSMContext=None):
     
     if action in ["see_cat", "see_cat_goods"]:
         catID = action_params[0]
+        categories = GoodsService.GetCategoriesTree()
+        cat = GoodsService.GetCategoryByID(catID)
         if catID == "":
-            categories = GoodsService.GetCategoriesTree()
             await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
             return
         loguru.logger.info(f"See catalog for category {catID}")
 
-        cat = GoodsService.GetCategoryByID(catID)
         if cat == None:
             await c.message.answer(f"А вот оказывается тут баг и категории {catID} не существует")
             return
 
         goods = [x for x in list(MDB.Goods.find(dict(GroupID=cat['GroupID']))) if x['QtyInStore'] > 0]
-        if goods:
+        subcats_dfs = get_category_tree(cat, [], categories)
+        extended_goods = [x for x in list(MDB.Goods.find()) if x['GroupID'] in subcats_dfs]
+        if extended_goods:
             req_id = str(uuid4())[:9]
             MDB.GoodsRequests.insert_one(dict(
                 ID=req_id,
-                GoodsIDs=[x['ProductID'] for x in goods],
+                GoodsIDs=[x['ProductID'] for x in extended_goods],
                 CategoryID=catID,
                 AppliedFilters={'GroupID': cat['GroupID']},
                 CreatedAt=datetime.datetime.now()
@@ -160,15 +215,13 @@ async def _(c: CallbackQuery, state: FSMContext=None):
 
             if req_id is not None:
                 req = MDB.GoodsRequests.find_one(dict(ID=req_id))
-                goods = list(MDB.Goods.find(dict(ProductID={"$in":req['GoodsIDs']})))
+                goods = apply_req(req, user)
             else:
                 goods = list(MDB.Goods.find(dict(GroupID=category_group_id)))
-                goods = [x for x in goods if x['QtyInStore'] > 0]
             selected_brands = stateData.get("selected_brands", [])
             all_brands = set(x['Manufacturer'] for x in goods)
 
             await c.message.answer(Texts.BrandFilterMessage, reply_markup=Keyboards.BrandFilter(all_brands, selected_brands))  
-            await state.set_state("BrandFilterState")
             await state.update_data(selected_brands=selected_brands, all_brands=all_brands, category_group_id=category_group_id)
 
         await c.answer()

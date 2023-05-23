@@ -18,7 +18,7 @@ load_dotenv()
 # Loader constants
 MONGO_CREDENTIALS = os.environ["MongoDB_Credentials"]
 MONGO_DB_NAME = os.environ["MongoDB_DatabaseName"]
-REQUESTS_TIMEOUT = 8
+REQUESTS_TIMEOUT = 5
 # Arrghh
 message_id_links={}
 
