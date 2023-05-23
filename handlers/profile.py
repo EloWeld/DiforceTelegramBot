@@ -12,7 +12,19 @@ from services.orderService import OrderService
 from services.textService import Texts
 from services.userService import UserService
 from loader import dp
-from utils import cutText
+from utils import cutText, format_fio
+    
+def get_personal_cabinet_text(user):
+    text = f"Личный кабинет пользователя {user.fullname}\n"
+
+    if user.is_authenticated:
+        text += "\n<b>✅ Вход выполнен ✅</b>\n"
+        text += f"\nНаименование: <code>{format_fio(user['diforce_data'].get('FullName', '')).title()}</code>\n"
+        text += f"ID: <code>{user['diforce_data'].get('ID', 'Не указано')}</code>\n"
+        text += f"ИНН: <code>{user['diforce_data'].get('INN', 'Не указано')}</code>\n"
+        text += f"КПП: <code>{user['diforce_data'].get('KPP', 'Не указано')}</code>\n"
+
+    return text
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('see_order:'))
@@ -79,10 +91,7 @@ async def order_info(c: CallbackQuery):
         # Profile
         user_id = c.from_user.id
         user = UserService.Get(user_id)
-        text = f"Личный кабинет пользователя {user.fullname}\n"
-        if user.is_authenticated:
-            text += "\n<b>✅ Вход выполнен ✅</b>\n"
-        await c.message.edit_text(text=text, reply_markup=Keyboards.Profile(user))
+        await c.message.edit_text(text=get_personal_cabinet_text(user), reply_markup=Keyboards.Profile(user))
     elif options[1] == "orders_history":
         user_id = c.from_user.id
         user = UserService.Get(user_id)
@@ -112,7 +121,7 @@ async def order_info(c: CallbackQuery):
         UserService.Update(user)
         await c.message.answer(Texts.YouLoggedOut, reply_markup=Keyboards.startMenu(user))
         await c.message.delete()
-    
+
 
 @dp.message_handler(Text(Texts.Profile), state="*")
 async def show_personal_cabinet(m: Message, state: FSMContext):
@@ -120,7 +129,4 @@ async def show_personal_cabinet(m: Message, state: FSMContext):
         await state.finish()
     user_id = m.from_user.id
     user = UserService.Get(user_id)
-    text = f"Личный кабинет пользователя {user.fullname}\n"
-    if user.is_authenticated:
-        text += "\n<b>✅ Вход выполнен ✅</b>\n"
-    await m.answer(text=text, reply_markup=Keyboards.Profile(user))
+    await m.answer(text=get_personal_cabinet_text(user), reply_markup=Keyboards.Profile(user))

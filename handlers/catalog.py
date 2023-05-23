@@ -7,7 +7,6 @@ import loguru
 from etc.filters import AntiSpam
 from etc.helpers import rdotdict, wrap_media
 from etc.keyboards import Keyboards
-from handlers.req import apply_req, get_category_tree
 from loader import MDB, dp, bot, Consts, message_id_links
 from io import BytesIO
 from PIL import Image
@@ -49,91 +48,6 @@ async def _(m: Message, state: FSMContext):
     await m.answer(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
 
 
-@dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|Good:", state="*")
-async def _(c: CallbackQuery, state: FSMContext):
-    global message_id_links
-    action = c.data.split(":")[1]
-    user = UserService.Get(c)
-
-    if action == "add_to_cart":
-        await c.answer()
-        goodID = c.data.split(":")[2]
-        good = GoodsService.GetGoodByID(goodID)
-        if good['QtyInStore'] == 0:
-            await c.message.answer("❌ Товара нет на складе, добавить в корзину невозможно")
-            return
-        UserService.AddToCart(user.id, good)
-        await c.message.answer(Texts.AddedToCart, reply_markup=Keyboards.addedToCart(good))
-
-    if action == "found_cheaper":
-        await c.answer()
-        goodID = c.data.split(":")[2]
-        await state.set_state("FoundItCheaper")
-        ans_msg = await c.message.answer(Texts.FoundCheaperMessage, reply_markup=Keyboards.foundCheaperMenu())
-        await state.update_data(goodID=goodID, msgID=ans_msg.message_id)
-    
-    if action == "see_other_photos":
-        await c.answer("📷 Фотографии загружаются...")
-        goodID = c.data.split(":")[2]
-        mg = MediaGroup()
-        good, images = GoodsService.GetGoodByID(goodID, True)
-        if images:
-            media_group = MediaGroup()
-            
-            def process_image(image):
-                b_img = base64.b64decode(image)
-                img = Image.open(BytesIO(b_img))
-                img_size = img.size
-                if img_size[0] * img_size[1] > 160000:
-                    return wrap_media(b_img) # Возвращаем обернутое изображение, если размеры соответствуют условию
-                else:
-                    return None # Возвращаем None, если размеры не соответствуют условию
-                
-            with ThreadPoolExecutor() as executor:
-                futures = []
-                for image in images[:10]: # Обрабатываем только первые 10 изображений
-                    future = executor.submit(process_image, image) # Отправляем изображение на обработку в отдельный поток
-                    futures.append(future)
-
-                for future in futures:
-                    result = future.result() # Ожидаем завершения обработки изображения
-                    if result:
-                        media_group.attach_photo(result) # Прикрепляем изображение к media_group, если результат не равен None
-                        
-            try:
-                mid = await c.message.answer_media_group(media_group)
-            except Exception as e:
-                loguru.logger.error(f"Cant send media group: {media_group}; e: {e}; traceback: {traceback.format_exc()}")
-            sessionID = c.data.split(":")[3]
-            sessionID2 = str(uuid4())[:10]
-            txtMsg = await c.message.answer(f"📷⤴️ Дополнительные фотографии к товару <b>{cutText(good['ProductName'], 50)}</b> <i>({goodID})</i>", reply_markup=Keyboards.hideAdditionalPhotos(sessionID2))
-            
-            additionalInfoMessages = mid + [txtMsg]
-            
-            good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
-            good_pictures_msgs[sessionID2] = additionalInfoMessages
-            if sessionID in good_pictures_msgs:
-                good_pictures_msgs[sessionID].extend(additionalInfoMessages)
-            await state.update_data(good_pictures_msgs=good_pictures_msgs)
-
-    
-    if action == "hide":
-        await c.answer()
-        mid = c.data.split(":")[2]
-        good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
-        if mid in good_pictures_msgs:
-            for good_msg in good_pictures_msgs[mid][::-1]:
-                try:
-                    await good_msg.delete()
-                except Exception as e:
-                    pass
-        await c.message.delete()
-        
-        if state:
-            await state.finish()
-    
-
-
 @dp.message_handler(state="PriceFilterState")
 async def _(m: Message, state: FSMContext):
     stateData = await state.get_data()
@@ -154,27 +68,30 @@ async def _(m: Message, state: FSMContext):
     loguru.logger.info(f"See catalog goods for category {catID}")
 
     cat = GoodsService.GetCategoryByID(catID)
-    categories = GoodsService.GetCategoriesTree()
     
     req_id = stateData.get('req_id', None)
     if req_id:
         req = MDB.GoodsRequests.find_one(dict(ID=req_id))
+        goods = list(MDB.Goods.find(dict(ProductID={"$in":req['GoodsIDs']})))
+    else:
+        goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
+    
+    pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
+    goods = [x for x in goods if min_price <= x[pr] <= max_price and x['QtyInStore'] > 0]
+    
+    if req_id:
+        # req['GoodsIDs'] = [x['ProductID'] for x in goods]
         req['AppliedFilters']['PriceFilter'] = {'min_price': min_price, 'max_price': max_price}
-        goods = apply_req(req, user)
         MDB.GoodsRequests.update_one(dict(ID=req_id), {"$set": req})
     else:
-        subcats_dfs = get_category_tree(cat, [], categories)
-        extended_goods = [x for x in list(MDB.Goods.find()) if x['GroupID'] in subcats_dfs]
         req_id = str(uuid4())[:9]
-        req = dict(
+        MDB.GoodsRequests.insert_one(dict(
             ID=req_id,
-            GoodsIDs=[x['ProductID'] for x in extended_goods],
+            GoodsIDs=[x['ProductID'] for x in goods],
             CategoryID=catID,
             AppliedFilters={'PriceFilter':{'min_price': min_price, 'max_price': max_price}},
             CreatedAt=datetime.datetime.now()
-        )
-        MDB.GoodsRequests.insert_one(req)
-        goods = apply_req(req, user)
+        ))
 
     if goods == []:
         await m.answer(Texts.NoGoodsForFilter, reply_markup=Keyboards.backToCategory(cat))
@@ -197,24 +114,30 @@ async def search_handler(m: Message, state: FSMContext):
     cat_id = state_data.get("category_id")
     cat = None
     
+    goods = MDB.Goods.find(
+        {"$text": {"$search": search_query}},
+        {"score": {"$meta": "textScore"}}
+    ).sort([("score", {"$meta": "textScore"})])
+    
+    goods = [x for x in goods if x['QtyInStore'] > 0]
+    
     req_id = state_data.get('req_id')
     if req_id is not None:
-        req = MDB.GoodsRequests.find_one(dict(ID=state_data['req_id']))
+        req = MDB.GoodsRequests.find_one({"ID": state_data['req_id']})
+        goods = [x for x in goods if x['ProductID'] in req['GoodsIDs']]
+        req['GoodsIDs'] = [x['ProductID'] for x in goods]
         req['AppliedFilters']['QuerySearch'] = search_query
-        goods = apply_req(req, user)
         MDB.GoodsRequests.update_one({"ID": req['ID']}, {"$set": req})
     else:
         cat = GoodsService.GetCategoryByID(cat_id)
         req_id = str(uuid4())[:9]
-        req = {
+        MDB.GoodsRequests.insert_one({
             "ID": req_id,
-            "GoodsIDs": [x['ProductID'] for x in MDB.Goods.find(dict(), {"ProductID": 1})],
+            "GoodsIDs": [x['ProductID'] for x in goods],
             "CategoryID": cat_id,
             "AppliedFilters": {'QuerySearch': search_query},
             "CreatedAt": datetime.datetime.now()
-        }
-        MDB.GoodsRequests.insert_one(req)
-        goods = apply_req(req, user)
+        })
     
     await state.update_data(req_id=req_id)
     await m.answer(Texts.SearchResults.format(found_count=len(goods)), reply_markup=Keyboards.filteredGoods(cat, goods, req_id))
@@ -223,34 +146,3 @@ async def search_handler(m: Message, state: FSMContext):
         await bot.delete_message(m.chat.id, state_data.get('msg_id'))
     except Exception as e:
         loguru.logger.error(f"Can't delete message: {e}")
-
-# =============== FOUND CHEAPER ===============
-
-@dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), content_types=[ContentType.TEXT, ContentType.PHOTO], state="FoundItCheaper")
-async def _(m: Message, state: FSMContext):
-    stateData = dotdict(await state.get_data())
-    user = UserService.Get(m.from_user.id)
-    await state.finish()
-    if m.text == Texts.QuitButton:
-        await m.answer('👌🏻', reply_markup=Keyboards.startMenu(user))
-        await m.delete()
-        await bot.delete_message(m.chat.id, stateData.msgID)
-        return
-    good = GoodsService.GetGoodByID(stateData.goodID)
-    comment = m.text if m.text else m.caption if m.caption else '➖'
-    # Define admin type for send message
-    if 'SmallOpt' in user.roles or 'MiddleOpt' in user.roles or 'LargeOpt' in user.roles:
-        contact = Consts.OptContactTGID
-    else:
-        contact = Consts.RetailContactTGID
-
-    # Build text
-    messageText = Texts.FoundCheaperAdminMessage.format(
-        good=good, user=user, comment=comment, BotUsername=Consts.BotUsername)
-
-    # If has attached photo - send photo
-    if len(m.photo) > 0:
-        await bot.send_photo(contact, caption=messageText, photo=m.photo[0].file_id)
-    else:
-        await bot.send_message(contact, text=messageText)
-    await m.answer(Texts.YourRequestWasSentMessage, reply_markup=Keyboards.startMenu(user))
