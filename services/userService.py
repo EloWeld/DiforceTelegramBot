@@ -19,7 +19,7 @@ class UserService:
             fullname=user.full_name,
             is_admin=False,
             is_authenticated=False,
-            opt=None,
+            opt="Retail",
             roles=["user"],
             addresses=[],
             balance=0.0,

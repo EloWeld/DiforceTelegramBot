@@ -122,7 +122,7 @@ async def _(m: Message, state: FSMContext):
     good = GoodsService.GetGoodByID(stateData.goodID)
     comment = m.text if m.text else m.caption if m.caption else '➖'
     # Define admin type for send message
-    if 'SmallOpt' in user.roles or 'MiddleOpt' in user.roles or 'LargeOpt' in user.roles:
+    if user.opt in ['SmallOpt', 'MiddleOpt', 'LargeOpt']:
         contact = Consts.OptContactTGID
     else:
         contact = Consts.RetailContactTGID

@@ -10,6 +10,7 @@ verbose = {None: "Не указано", "non_cash": "💳 Безнал", "cash":
 "LargeOpt": "Крупный опт 🥇",
 "MiddleOpt": "Средний опт 🥈",
 "SmallOpt": "Малый опт 🥉",
+"Retail": "Розница 💳",
 }
 
 class TextsMetaClass(type):
@@ -160,6 +161,8 @@ class TextsMetaClass(type):
             return "Средний опт"
         if key == "LargeOpt":
             return "Крупный опт"
+        if key == "Retail":
+            return "Розница"
         if key == "admin":
             return "Админ"
         if key == "user":

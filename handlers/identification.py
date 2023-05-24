@@ -109,12 +109,14 @@ async def process_inn(message: types.Message, state: FSMContext):
             if user['diforce_data']['ContractType'] in ["МЕЛКООПТОВААЯ", "ОПТОВАЯ"]:
                 user['roles'] = list(set(user['roles']+["SmallOpt"]))
                 user['opt'] = "SmallOpt"
-            if user['diforce_data']['ContractType'] in ["СПЕЦ ЦЕНА ОПТОВАЯ"]:
+            elif user['diforce_data']['ContractType'] in ["СПЕЦ ЦЕНА ОПТОВАЯ"]:
                 user['roles'] = list(set(user['roles']+["MiddleOpt"]))
                 user['opt'] = "MiddleOpt"
-            if user['diforce_data']['ContractType'] == "КРУПНЫЙ ОПТ":
+            elif user['diforce_data']['ContractType'] == "КРУПНЫЙ ОПТ":
                 user['roles'] = list(set(user['roles']+["LargeOpt"]))
                 user['opt'] = "LargeOpt"
+            else:
+                user['opt'] = "Retail"
             
             UserService.Update(user)
         else:
