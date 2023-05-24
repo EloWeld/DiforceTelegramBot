@@ -83,16 +83,14 @@ class Keyboards:
         k = IKeyboard(row_width=3)
         k.row(IButton(Texts.SearchButton,
                          callback_data="|Catalog:search:None"))
-        for catID in categories[start_ind:start_ind+20]:
+        for catID in list(categories.keys())[start_ind:start_ind+20]:
             k.row(IButton(categories[catID]['GroupName'],
                              callback_data=f"|Catalog:see_cat:{catID}"))
             
         if len(categories) > 20:
             k.row()
-            if start_ind < len(categories) - 20:
-                k.insert(IButton("➡️", callback_data=f"|Catalog:root_categories:{start_ind+20}"))
-            if start_ind > 0:
-                k.insert(IButton("⬅️", callback_data=f"|Catalog:root_categories:{start_ind-20}"))
+            k.insert(IButton("⬅️", callback_data=f"|Catalog:root_categories:{start_ind-20}"))
+            k.insert(IButton("➡️", callback_data=f"|Catalog:root_categories:{start_ind+20}"))
         return k
 
     @staticmethod

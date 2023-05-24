@@ -25,7 +25,7 @@ from dotdict import dotdict
 
 from services.textService import Texts
 from services.userService import UserService
-from utils import cutText, prepareGoodItemToSend
+from utils import cutText, prepareGoodItemToSend, tryDelete
 
 @dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|Good:", state="*")
 async def _(c: CallbackQuery, state: FSMContext):
@@ -100,11 +100,8 @@ async def _(c: CallbackQuery, state: FSMContext):
         good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
         if mid in good_pictures_msgs:
             for good_msg in good_pictures_msgs[mid][::-1]:
-                try:
-                    await good_msg.delete()
-                except Exception as e:
-                    pass
-        await c.message.delete()
+                await tryDelete(good_msg)
+        await tryDelete(c.message)
         
         if state:
             await state.finish()

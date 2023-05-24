@@ -24,6 +24,12 @@ def split_long_text(text: str, max_length: int = 4000):
     parts.append(text)
     return parts
 
+async def tryDelete(msg):
+    try:
+        await msg.delete()
+    except Exception as e:
+        loguru.logger.error(f"Can't delete message, doesnt exists anymore")
+
 
 def prepareUserToPrint(xUser):
     xUser.roles = ', '.join([Texts.rus(x) for x in xUser.roles])

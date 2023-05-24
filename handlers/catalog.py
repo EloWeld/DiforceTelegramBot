@@ -7,6 +7,7 @@ import loguru
 from etc.filters import AntiSpam
 from etc.helpers import rdotdict, wrap_media
 from etc.keyboards import Keyboards
+from handlers.req import apply_req, get_category_tree
 from loader import MDB, dp, bot, Consts, message_id_links
 from io import BytesIO
 from PIL import Image
@@ -67,31 +68,28 @@ async def _(m: Message, state: FSMContext):
 
     loguru.logger.info(f"See catalog goods for category {catID}")
 
-    cat = GoodsService.GetCategoryByID(catID)
+    categories = GoodsService.GetCategoriesTree()
+    cat = GoodsService.GetCategoryByID(catID, categories)
     
     req_id = stateData.get('req_id', None)
     if req_id:
         req = MDB.GoodsRequests.find_one(dict(ID=req_id))
-        goods = list(MDB.Goods.find(dict(ProductID={"$in":req['GoodsIDs']})))
-    else:
-        goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
-    
-    pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
-    goods = [x for x in goods if min_price <= x[pr] <= max_price and x['QtyInStore'] > 0]
-    
-    if req_id:
-        # req['GoodsIDs'] = [x['ProductID'] for x in goods]
         req['AppliedFilters']['PriceFilter'] = {'min_price': min_price, 'max_price': max_price}
+        goods = apply_req(req, user)
         MDB.GoodsRequests.update_one(dict(ID=req_id), {"$set": req})
     else:
+        subcats_dfs = get_category_tree(cat, [], categories)
+        extended_goods = [x for x in list(MDB.Goods.find()) if x['GroupID'] in subcats_dfs]
         req_id = str(uuid4())[:9]
-        MDB.GoodsRequests.insert_one(dict(
+        req = dict(
             ID=req_id,
-            GoodsIDs=[x['ProductID'] for x in goods],
+            GoodsIDs=[x['ProductID'] for x in extended_goods],
             CategoryID=catID,
             AppliedFilters={'PriceFilter':{'min_price': min_price, 'max_price': max_price}},
             CreatedAt=datetime.datetime.now()
-        ))
+        )
+        MDB.GoodsRequests.insert_one(req)
+        goods = apply_req(req, user)
 
     if goods == []:
         await m.answer(Texts.NoGoodsForFilter, reply_markup=Keyboards.backToCategory(cat))
@@ -114,30 +112,23 @@ async def search_handler(m: Message, state: FSMContext):
     cat_id = state_data.get("category_id")
     cat = None
     
-    goods = MDB.Goods.find(
-        {"$text": {"$search": search_query}},
-        {"score": {"$meta": "textScore"}}
-    ).sort([("score", {"$meta": "textScore"})])
-    
-    goods = [x for x in goods if x['QtyInStore'] > 0]
-    
     req_id = state_data.get('req_id')
     if req_id is not None:
-        req = MDB.GoodsRequests.find_one({"ID": state_data['req_id']})
-        goods = [x for x in goods if x['ProductID'] in req['GoodsIDs']]
-        req['GoodsIDs'] = [x['ProductID'] for x in goods]
+        req = MDB.GoodsRequests.find_one(dict(ID=state_data['req_id']))
         req['AppliedFilters']['QuerySearch'] = search_query
+        goods = apply_req(req, user)
         MDB.GoodsRequests.update_one({"ID": req['ID']}, {"$set": req})
     else:
-        cat = GoodsService.GetCategoryByID(cat_id)
+        categories = GoodsService.GetCategoriesTree()
+        cat = GoodsService.GetCategoryByID(cat_id, categories)
         req_id = str(uuid4())[:9]
-        MDB.GoodsRequests.insert_one({
-            "ID": req_id,
-            "GoodsIDs": [x['ProductID'] for x in goods],
+        req = {
+            "ID": req_id, "GoodsIDs": [x['ProductID'] for x in MDB.Goods.find(dict(), {"ProductID": 1})],
             "CategoryID": cat_id,
             "AppliedFilters": {'QuerySearch': search_query},
-            "CreatedAt": datetime.datetime.now()
-        })
+            "CreatedAt": datetime.datetime.now()}
+        MDB.GoodsRequests.insert_one(req)
+        goods = apply_req(req, user)
     
     await state.update_data(req_id=req_id)
     await m.answer(Texts.SearchResults.format(found_count=len(goods)), reply_markup=Keyboards.filteredGoods(cat, goods, req_id))

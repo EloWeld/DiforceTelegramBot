@@ -41,14 +41,13 @@ class GoodsService:
         """
         Получает информацию о категории товаров по её идентификатору `category_id` и возвращает объект `rdotdict`, содержащий информацию о категории, или `None`, если категория не найдена.
         """
-        catalog = MDB.Settings.find_one(dict(id="Catalog"))['catalog']
-        if category_id in catalog:
-            return rdotdict(catalog[category_id])
+        if category_id in subgroups:
+            return rdotdict(subgroups[category_id])
 
-        for group_id in catalog:
-            subgroups = catalog[group_id]['Subgroups']
-            if subgroups:
-                result = GoodsService.GetCategoryByID(category_id, subgroups)
+        for group_id in subgroups:
+            subgroups2 = subgroups[group_id]['Subgroups']
+            if subgroups2:
+                result = GoodsService.GetCategoryByID(category_id, subgroups2)
                 if result:
                     return result
         return None
