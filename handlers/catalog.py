@@ -16,7 +16,7 @@ from fuzzywuzzy import fuzz
 from aiogram import Bot, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, Text, ChatTypeFilter
-from aiogram.types import Message, ChatType, BotCommand, CallbackQuery, ContentType, MediaGroup, InputFile
+from aiogram.types import Message, ChatType
 from services.goodsService import GoodsService
 
 from services.oneService import OneService
@@ -26,7 +26,6 @@ from dotdict import dotdict
 
 from services.textService import Texts
 from services.userService import UserService
-from utils import cutText, prepareGoodItemToSend
 
 
 # ▒▄█▀▀█░▐█▀▀─░▄█▀▄─▒▐█▀▀▄░▐█▀█░▐█░▐█

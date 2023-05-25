@@ -20,6 +20,7 @@ class UserService:
             is_admin=False,
             is_authenticated=False,
             opt="Retail",
+            optText=None,
             roles=["user"],
             addresses=[],
             balance=0.0,

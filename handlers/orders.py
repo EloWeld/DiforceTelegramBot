@@ -202,13 +202,13 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         cartItems = user['cart']
         for key, cartItem in cartItems.items():
             good = MDB.Goods.find_one(dict(ProductID=cartItem['ProductID']))
-            try:
-                good['QtyInStore'] = [x for x in good['QuantityInStores']
-                                      if x['store_id'] == "000000001"][0]['quantity']
-            except Exception:
-                good['QtyInStore'] = 0
 
             if good:
+                try:
+                    good['QtyInStore'] = [x for x in good['QuantityInStores']
+                                        if x['store_id'] == "000000001"][0]['quantity']
+                except Exception:
+                    good['QtyInStore'] = 0
                 cartItem['Price'] = GoodsService.GetTargetPrice(user, good)
                 goods.append(good)
 

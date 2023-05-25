@@ -25,7 +25,7 @@ from dotdict import dotdict
 
 from services.textService import Texts
 from services.userService import UserService
-from utils import cutText, prepareGoodItemToSend, tryDelete
+from utils import cutText, tryDelete
 
 @dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|Good:", state="*")
 async def _(c: CallbackQuery, state: FSMContext):

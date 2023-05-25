@@ -12,7 +12,7 @@ from services.goodsService import GoodsService
 from services.oneService import OneService
 from services.textService import Texts
 from services.userService import UserService
-from utils import format_phone_number
+from utils import format_fio, format_phone_number
 
 # задание состояний FSM
 class Form(StatesGroup):
@@ -50,34 +50,31 @@ async def process_phone_email(message: types.Message, state: FSMContext):
         await Form.full_name.set()
 
 
-# обработчик ответа на вопрос "Ваше полное наименование, например ООО Рога и Копыта"
-@dp.message_handler(state=Form.full_name)
-async def process_full_name(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['full_name'] = message.text
+# @dp.message_handler(state=Form.full_name)
+# async def process_full_name(message: types.Message, state: FSMContext):
+#     async with state.proxy() as data:
 
-        # отправляем следующий вопрос
-        await message.answer("Введите ИНН+КПП организации (Если нет КПП - отправьте просто ИНН. Если вовсе нет ИНН - введите 0):")
+#         # отправляем следующий вопрос
+#         await message.answer("Введите ИНН+КПП организации (Если нет КПП - отправьте просто ИНН. Если вовсе нет ИНН - введите 0):")
 
-        # переход в состояние inn для получения ИНН организации
-        await Form.inn.set()
+#         # переход в состояние inn для получения ИНН организации
+#         await Form.inn.set()
 
 from fuzzywuzzy import fuzz
-# обработчик ответа на вопрос "Ваш ИНН если есть"
-@dp.message_handler(state=Form.inn)
+# обработчик ответа на вопрос "Ваше полное наименование, например ООО Рога и Копыта"
+@dp.message_handler(state=Form.full_name)
 async def process_inn(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         user = UserService.Get(message.from_user.id)
-        if message.text != "0" and message.text.strip().isdigit():
-            data['inn+kpp'] = message.text
+        data['full_name'] = message.text
         
         # ищем информацию в базе данных
         d_users = MDB.DiforceUsers.find()
         sameUsers = []
         for d_user in d_users:
             cond = True
-            if 'inn+kpp' in data and 'INN' in d_user:
-                cond = cond and data['inn+kpp'].split('+')[0] == d_user['INN']
+            # if 'inn+kpp' in data and 'INN' in d_user:
+            #     cond = cond and data['inn+kpp'].split('+')[0] == d_user['INN']
             if 'full_name' in data and 'FullName' in d_user:
                 prob = fuzz.partial_ratio(format_fio(data['full_name']), format_fio(d_user['FullName']))
                 cond = cond and  prob > 90
@@ -93,8 +90,8 @@ async def process_inn(message: types.Message, state: FSMContext):
         t = "Спасибо! Вы заполнили анкету. Вот ваши данные:\n\n" \
                             f"Номер телефона/email: {data['phone'] if 'phone' in data else data['email'] if 'email' in data else '?'}\n" \
                             f"Полное наименование: {data['full_name']}\n"
-        if 'inn+kpp' in data:
-            t += f"ИНН+КПП организации: {data['inn+kpp']}\n"
+        # if 'inn+kpp' in data:
+        #     t += f"ИНН+КПП организации: {data['inn+kpp']}\n"
             
         await message.answer(t)
         if len(sameUsers) <= 3 and len(sameUsers) > 0:
@@ -106,6 +103,7 @@ async def process_inn(message: types.Message, state: FSMContext):
             
             await message.answer(f"✅ Спасибо! Вы идентифицированы!", reply_markup=Keyboards.startMenu(user))
             
+            user['optText'] = user['diforce_data']['ContractType']
             if user['diforce_data']['ContractType'] in ["МЕЛКООПТОВААЯ", "ОПТОВАЯ"]:
                 user['roles'] = list(set(user['roles']+["SmallOpt"]))
                 user['opt'] = "SmallOpt"

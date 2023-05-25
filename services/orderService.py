@@ -35,7 +35,7 @@ class OrderService:
         if order is None:
             return None
         order['created_with_bot'] = True
-        order['created_date'] = datetime.datetime.strptime(diforce_data['CreatedOrderDate'], "%Y-%m-%dT%H:%M:%S")
+        order['created_date'] = datetime.datetime.now()##datetime.datetime.strptime(diforce_data['CreatedOrderDate'], "%Y-%m-%dT%H:%M:%S")
         return rdotdict(order)
 
     @classmethod

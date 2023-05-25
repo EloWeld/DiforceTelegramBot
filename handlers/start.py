@@ -34,7 +34,7 @@ async def parseStartMessage(m: Message):
         good['Price'] = GoodsService.GetTargetPrice(user, good)
         good['ColorName'] = good['ColorName'].capitalize()
         
-        messageText = prepareGoodItemToSend(good)
+        messageText = prepareGoodItemToSend(good, user)
         
         loguru.logger.info(f"See good: {goodID}")
 

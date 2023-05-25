@@ -117,7 +117,9 @@ async def order_info(c: CallbackQuery):
         user_id = c.from_user.id
         user = UserService.Get(user_id)
         user['is_authenticated'] = False
+        user['roles'] = [x for x in user['roles'] if x not in ['SmallOpt', 'MiddleOpt', 'LargeOpt']]
         user['opt'] = None
+        user['optText'] = None
         user['diforce_data'] = None
         UserService.Update(user)
         await c.message.answer(Texts.YouLoggedOut, reply_markup=Keyboards.startMenu(user))

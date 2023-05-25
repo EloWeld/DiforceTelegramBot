@@ -25,7 +25,7 @@ from utils import cutText, format_phone_number, prepareCartItemToSend, prepareGo
 
 async def sendCartItem(good, cartItem, user):
     """Send cart item message with or without image."""
-    messageText = prepareCartItemToSend(good, cartItem)
+    messageText = prepareCartItemToSend(good, cartItem, user)
     keyboard = Keyboards.cartItem(good)
 
     if 'ProductImage' in good and good['ProductImage']:
@@ -42,7 +42,7 @@ async def decrement_cart_item_count(c, user, goodsID, good, cartItem):
     user.cart[goodsID]['Quantity'] -= 1
     UserService.Update(user)
 
-    messageText = prepareGoodItemToSend(good, cartItem)
+    messageText = prepareGoodItemToSend(good, cartItem, user)
     if c.message.caption:
         await c.message.edit_caption(messageText, reply_markup=c.message.reply_markup)
     else:

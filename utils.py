@@ -43,9 +43,9 @@ def cutText(text: str, limit: int):
         return text
     
 
-def prepareGoodItemToSend(good):
+def prepareGoodItemToSend(good, user):
     """Prepare cart item message text for sending."""
-    good['PriceType'] = "МЕЛКИЙ ОПТ" if good['Price'] == good['PriceOptSmall'] else "СРЕДНИЙ ОПТ" if good['Price'] == good['PriceOptMiddle'] else "КРУПНЫЙ ОПТ" if good['Price'] == good['PriceOptLarge'] else "РОЗНИЦА"
+    good['PriceType'] = user['optText'] if user['optText'] else "РОЗНИЦА"
     good['Price'] = f"{good['Price']:,}".replace(',', ' ')
     good['ProductDescription'] = cutText(good['ProductDescription'], 3500)
     messageText = Texts.GoodCard.format(**good)
@@ -54,9 +54,9 @@ def prepareGoodItemToSend(good):
     
     
 
-def prepareCartItemToSend(good, cartItem):
+def prepareCartItemToSend(good, cartItem, user):
     """Prepare cart item message text for sending."""
-    good['PriceType'] = "МЕЛКИЙ ОПТ" if good['Price'] == good['PriceOptSmall'] else "СРЕДНИЙ ОПТ" if good['Price'] == good['PriceOptMiddle'] else "КРУПНЫЙ ОПТ" if good['Price'] == good['PriceOptLarge'] else "РОЗНИЦА"
+    good['PriceType'] = user['optText'] if user['optText'] else "РОЗНИЦА"
     good['Price'] = f"{good['Price']:,}".replace(',', ' ')
     messageText = Texts.GoodCard.format(
         **good) + Texts.CartItemMessage.format(**cartItem)
