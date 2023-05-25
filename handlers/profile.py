@@ -125,11 +125,3 @@ async def order_info(c: CallbackQuery):
         await c.message.answer(Texts.YouLoggedOut, reply_markup=Keyboards.startMenu(user))
         await c.message.delete()
 
-
-@dp.message_handler(Text(Texts.Profile), state="*")
-async def show_personal_cabinet(m: Message, state: FSMContext):
-    if state:
-        await state.finish()
-    user_id = m.from_user.id
-    user = UserService.Get(user_id)
-    await m.answer(text=get_personal_cabinet_text(user), reply_markup=Keyboards.Profile(user))

@@ -84,7 +84,7 @@ async def _(c: CallbackQuery, state: FSMContext):
                 loguru.logger.error(f"Cant send media group: {media_group}; e: {e}; traceback: {traceback.format_exc()}")
             sessionID = c.data.split(":")[3]
             sessionID2 = str(uuid4())[:10]
-            txtMsg = await c.message.answer(f"📷⤴️ Дополнительные фотографии к товару <b>{cutText(good['ProductName'], 50)}</b> <i>({goodID})</i>", reply_markup=Keyboards.hideAdditionalPhotos(sessionID2))
+            txtMsg = await c.message.answer(f"📷⤴️ Дополнительные фотографии к товару <b>{cutText(good['ProductName'], 50)}</b> <i>({good['ProductArt']})</i>", reply_markup=Keyboards.hideAdditionalPhotos(sessionID2))
             
             additionalInfoMessages = mid + [txtMsg]
             

@@ -47,6 +47,8 @@ def prepareGoodItemToSend(good, user):
     """Prepare cart item message text for sending."""
     good['PriceType'] = user['optText'] if user['optText'] else "РОЗНИЦА"
     good['Price'] = f"{good['Price']:,}".replace(',', ' ')
+    good['ProductDescription'] = good['ProductDescription'].replace('<', '‹').replace('>', '›')
+    good['ProductName'] = good['ProductName'].replace('<', '‹').replace('>', '›')
     good['ProductDescription'] = cutText(good['ProductDescription'], 3500)
     messageText = Texts.GoodCard.format(**good)
     print(messageText)
@@ -58,6 +60,8 @@ def prepareCartItemToSend(good, cartItem, user):
     """Prepare cart item message text for sending."""
     good['PriceType'] = user['optText'] if user['optText'] else "РОЗНИЦА"
     good['Price'] = f"{good['Price']:,}".replace(',', ' ')
+    good['ProductDescription'] = good['ProductDescription'].replace('<', '‹').replace('>', '›')
+    good['ProductName'] = good['ProductName'].replace('<', '‹').replace('>', '›')
     messageText = Texts.GoodCard.format(
         **good) + Texts.CartItemMessage.format(**cartItem)
     return messageText

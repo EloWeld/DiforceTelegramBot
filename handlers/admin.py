@@ -19,12 +19,6 @@ class Mailing(StatesGroup):
     links = State()
     confirm = State()
     
-@dp.message_handler(Command("admin"), Admin())
-@dp.message_handler(Text(Texts.AdminMenuButton), Admin())
-async def show_admin_menu(message: types.Message):
-    await message.answer(Texts.AdminMenuMessage, reply_markup=Keyboards.AdminMenu())
-    
-    
 
 @dp.callback_query_handler(lambda call: call.data.startswith("admin:"), state="*")
 async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):

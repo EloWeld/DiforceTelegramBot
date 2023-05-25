@@ -63,7 +63,7 @@ class Keyboards:
         k = IKeyboard()
         if user['is_authenticated']:
             k.add(IButton(f"История заказов", callback_data=f"profile:orders_history"))
-        k.row(IButton(Texts.OptPricesFileButton, url="https://diforce.ru/price.xlsx"))
+        k.row(IButton(Texts.OptPricesFileButton, url="https://opt.diforce.ru"))
         
         if user['is_authenticated']:
             k.row(IButton(Texts.LogoutButton, callback_data=f"profile:logout_popup"))

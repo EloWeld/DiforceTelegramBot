@@ -46,7 +46,7 @@ def search_objects(objects_list, search_query):
         tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query)]
     results = []
     for obj in objects_list:
-        tokens_obj = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(obj['ProductName'])]
+        tokens_obj = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(f"{obj['Manufacturer']} {obj['ProductName']} {obj['ProductArt']}")]
         score = 0
         for token in tokens_query:
             if token in tokens_obj:
@@ -240,6 +240,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
                 goods = apply_req(req, user)
             else:
                 goods = list(MDB.Goods.find(dict(GroupID=category_group_id)))
+                
             selected_brands = stateData.get("selected_brands", [])
             all_brands = set(x['Manufacturer'] for x in goods)
 
@@ -273,25 +274,29 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         cat = GoodsService.GetCategoryByID(catID, categories)
         req_id = stateData.get('req_id', None)
         if req_id is None:
-            goods = list(MDB.Goods.find(dict(GroupID=cat['GroupID'])))
-            if selected_brands:
-                goods = [x for x in goods if x['Manufacturer'] in selected_brands]
+            subcats_dfs = get_category_tree(cat, [], categories)
+            extended_goods = [x for x in list(MDB.Goods.find()) if x['GroupID'] in subcats_dfs]
             req_id = str(uuid4())[:9]
+            req = dict(
+                ID=req_id,
+                GoodsIDs=[x['ProductID'] for x in extended_goods],
+                CategoryID=catID,
+                AppliedFilters={'PriceFilter':{'min_price': min_price, 'max_price': max_price}},
+                CreatedAt=datetime.datetime.now()
+            )
             MDB.GoodsRequests.insert_one(dict(
                 ID=req_id,
-                GoodsIDs=[x['ProductID'] for x in goods],
+                GoodsIDs=[x['ProductID'] for x in extended_goods],
                 CategoryID=catID,
                 AppliedFilters={'BrandFilter': {"Brands": selected_brands}},
                 CreatedAt=datetime.datetime.now()
             ))
+            goods = apply_req(req, user)
         else:
             req = MDB.GoodsRequests.find_one(dict(ID=stateData['req_id']))
-            goods = list(MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']})))
-            if selected_brands:
-                goods = [x for x in goods if x['Manufacturer'] in selected_brands]
-            # req['GoodsIDs'] = [x['ProductID'] for x in goods]
             req['AppliedFilters']['BrandFilter'] = {"Brands": selected_brands}
             MDB.GoodsRequests.update_one(dict(ID=stateData['req_id']), {"$set": req})
+            goods = apply_req(req, user)
 
         if not goods:
             await c.message.answer(Texts.NoGoodsForFilter, reply_markup=Keyboards.backToCategory(cat))

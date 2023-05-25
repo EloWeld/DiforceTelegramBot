@@ -26,7 +26,7 @@ from dotdict import dotdict
 
 from services.textService import Texts
 from services.userService import UserService
-
+from etc.filters import Admin
 
 # ▒▄█▀▀█░▐█▀▀─░▄█▀▄─▒▐█▀▀▄░▐█▀█░▐█░▐█
 # ▒▀▀█▄▄░▐█▀▀░▐█▄▄▐█▒▐█▒▐█░▐█──░▐████
@@ -48,6 +48,45 @@ async def _(m: Message, state: FSMContext):
     await m.answer(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
 
 
+@dp.message_handler(Text(Texts.CartButton), AntiSpam(), ChatTypeFilter(ChatType.PRIVATE), state="*")
+async def show_cart_handler(m: Message, state: FSMContext):
+    from handlers.cart import showCart
+    """Handle 'show cart' request."""
+    if state:
+        await state.finish()
+    user = UserService.Get(m)
+
+    await showCart(user)
+
+
+@dp.message_handler(Command("admin"), Admin())
+@dp.message_handler(Text(Texts.AdminMenuButton), Admin())
+async def show_admin_menu(message: types.Message):
+    await message.answer(Texts.AdminMenuMessage, reply_markup=Keyboards.AdminMenu())
+    
+
+@dp.message_handler(Text(Texts.AuthButton), AntiSpam(), ChatTypeFilter(ChatType.PRIVATE), state="*")
+async def _(m: Message, state: FSMContext):
+    if state:
+        await state.finish()
+    
+    await m.answer(Texts.PleaseFillForm)
+    
+    await m.answer("Напиши свой номер телефона/email для входа на сайт:")
+
+    # переход в состояние phone_email для получения номера телефона/email
+    await Form.phone_email.set()
+
+
+@dp.message_handler(Text(Texts.Profile), state="*")
+async def show_personal_cabinet(m: Message, state: FSMContext):
+    if state:
+        await state.finish()
+    user_id = m.from_user.id
+    user = UserService.Get(user_id)
+    await m.answer(text=get_personal_cabinet_text(user), reply_markup=Keyboards.Profile(user))
+    
+    
 @dp.message_handler(state="PriceFilterState")
 async def _(m: Message, state: FSMContext):
     stateData = await state.get_data()

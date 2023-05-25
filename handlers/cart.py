@@ -42,7 +42,8 @@ async def decrement_cart_item_count(c, user, goodsID, good, cartItem):
     user.cart[goodsID]['Quantity'] -= 1
     UserService.Update(user)
 
-    messageText = prepareGoodItemToSend(good, cartItem, user)
+    messageText = prepareCartItemToSend(good, cartItem, user)
+    
     if c.message.caption:
         await c.message.edit_caption(messageText, reply_markup=c.message.reply_markup)
     else:
@@ -58,10 +59,13 @@ async def remove_from_cart(c, user, goodsID, good, cartItem):
     await showCart()
 
 async def increment_cart_item_count(c, user, goodsID, good, cartItem):
+    if good['QtyInStore'] < user.cart[goodsID]['Quantity'] + 1:
+        await c.answer("❌ Товара в таком количестве на складе нет", show_alert=True)
+        return
     user.cart[goodsID]['Quantity'] += 1
     UserService.Update(user)
 
-    messageText = prepareCartItemToSend(good, cartItem)
+    messageText = prepareCartItemToSend(good, cartItem, user)
 
     if c.message.caption:
         await c.message.edit_caption(messageText, reply_markup=c.message.reply_markup)
@@ -103,38 +107,6 @@ async def showCart(user):
                                                                  cart_price=cartPriceString), reply_markup=Keyboards.yourCart(cartItems))
 
 
-@dp.message_handler(Text(Texts.CartButton), AntiSpam(), ChatTypeFilter(ChatType.PRIVATE), state="*")
-async def show_cart_handler(m: Message, state: FSMContext):
-    """Handle 'show cart' request."""
-    if state:
-        await state.finish()
-    user = UserService.Get(m)
-
-    await showCart(user)
-
-
-@dp.message_handler(state="AddDeliveryAddress")
-async def _(m: Message, state: FSMContext):
-    if len(m.text) > 1000:
-        await m.answer("❌ Слишком длинный адрес!")
-        return
-    user = UserService.Get(m)
-    addr_id = str(uuid4())[:10]
-    user['addresses'].append(dict(
-        Name=m.text,
-        ID=addr_id
-    ))
-    UserService.Update(user)
-    await state.update_data(deliv_address_id=addr_id)
-    stateData = await state.get_data()
-    await m.answer("Укажите адрес доставки",
-                   reply_markup=Keyboards.DelivAddress(user,
-                                                       stateData.get(
-                                                           'deliv_method', None), 
-                                                       stateData.get(
-                                                           'deliv_address_id', None)
-                                                       ))
-
 
 @dp.message_handler(state="cart_product_quantity")
 async def set_cart_product_quantity(m: Message, state: FSMContext):
@@ -149,12 +121,18 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
 
     user = UserService.Get(m.from_user.id)
     cartItem = None
+    good = GoodsService.GetGoodByID(stateData['cartItemID'], False)
+    
+    if quantity > good['QtyInStore']:
+        await m.answer(f"❌ {quantity} единиц товара нет на складе, максимальное количество - <code>{good['QtyInStore']}</code>. Количество не изменено, введите ещё раз")
+        return
+    
     for x in user.cart:
         if x == stateData['cartItemID']:
             user.cart[x]['Quantity'] = quantity
             cartItem = user.cart[x]
             break
-    good = GoodsService.GetGoodByID(cartItem['ProductID'], False)
+        
     if good['QtyInStore'] == 0:
         await m.answer(f"❌ {quantity} единиц товара нет на складе, количество не изменено")
         return

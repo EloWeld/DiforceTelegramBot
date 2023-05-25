@@ -153,8 +153,10 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             if user['cart'] == {}:
                 await c.answer("😶 Корзина пуста!", show_alert=True)
 
-            for cartItemID in user['cart']:
-                MDB.Goods.update_one(dict(ProductID=cartItemID), {"$inc": {"QtyInStore": -1 * user['cart'][cartItemID]['Quantity']}})
+            # Уменьшаем количество на складах купленных товаров
+            # Сейчас не нужно
+            # for cartItemID in user['cart']:
+            #     MDB.Goods.update_one(dict(ProductID=cartItemID), {"$inc": {"QtyInStore": -1 * user['cart'][cartItemID]['Quantity']}})
 
             user['cart'] = {}
             UserService.Update(user)
@@ -176,7 +178,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
                 formatted_summary = f"Общая стоимость корзины: <code>{full_cart_summary:,}₽</code>".replace(',', ' ')
                 order_text += formatted_summary
-                order_text += f"\n\n🚩 Адрес доставки: <code>{verbose.get(order_data['DeliveryAddress'], 'Не указан')}</code>\n"
+                order_text += f"\n\n🚩 Адрес доставки: <code>{order_data.get('DeliveryAddress', 'Не указан')}</code>\n"
                 order_text += f"🚩 Способ доставки: <code>{verbose[order_data['DeliveryMethod']]}</code>\n"
                 order_text += f"🚩 Способ оплаты: <code>{verbose[order_data['PayMethod']]}</code>\n"
 

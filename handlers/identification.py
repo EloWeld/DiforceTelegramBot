@@ -21,19 +21,6 @@ class Form(StatesGroup):
     inn = State()                # ИНН организации (если есть)
 
 
-@dp.message_handler(Text(Texts.AuthButton), AntiSpam(), ChatTypeFilter(ChatType.PRIVATE), state="*")
-async def _(m: Message, state: FSMContext):
-    if state:
-        await state.finish()
-    
-    await m.answer(Texts.PleaseFillForm)
-    
-    await m.answer("Напиши свой номер телефона/email для входа на сайт:")
-
-    # переход в состояние phone_email для получения номера телефона/email
-    await Form.phone_email.set()
-
-
 # обработчик ответа на вопрос "Номер телефона/email для входа на сайт"
 @dp.message_handler(state=Form.phone_email)
 async def process_phone_email(message: types.Message, state: FSMContext):
