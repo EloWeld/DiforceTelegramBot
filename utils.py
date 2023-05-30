@@ -106,3 +106,14 @@ def format_fio(fio):
     # Удаление пробелов по краям
     fio = fio.strip()
     return fio
+
+
+def is_in_group_hierarchy(user_group, target_groups, groups):
+    if user_group in target_groups:
+        return True
+    
+    for group in groups:
+        if group['GroupID'] == user_group:
+            return is_in_group_hierarchy(group['HeadGroupID'], target_groups, groups)
+
+    return False

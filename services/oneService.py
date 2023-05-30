@@ -152,6 +152,13 @@ class OneServiceBase:
             loguru.logger.error(
                 f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
         return r.json()
+    
+    def getUsersGroups(self):
+        r = self.session.get(self.base_endpoint+"getUsersTree")
+        if r.status_code != 200:
+            loguru.logger.error(
+                f"Can't get users groups; Response: {r.text}, Status: {r.status_code}")
+        return r.json()
 
     def getUser(self, user_id):
         r = self.session.get(self.base_endpoint+"getUser",

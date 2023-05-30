@@ -9,7 +9,7 @@ from dotdict import dotdict
 import schedule
 
 from services.oneService import OneService
-from utils import format_phone_number
+from utils import format_phone_number, is_in_group_hierarchy
 
 FORBIDDEN_GROUP_IDS = [
     "ЦБ000000011",
@@ -25,12 +25,14 @@ FORBIDDEN_GROUP_IDS = [
     "DI000007050",
 ]
 
-ALLOWED_CONTRACT_TYPES = [
-    "КРУПНЫЙ ОПТ",
-    "ПОКУПАТЕЛИ ОПТОВЫЕ",
-    "МЕЛКООПТОВААЯ", 
-    "ОПТОВАЯ",
-    "СПЕЦ ЦЕНА ОПТОВАЯ"
+ALLOWED_USER_GROUPS = [
+    "DI0000764",
+    "ЦБ0000028",
+    "ЦБ0000540",
+    "ИН0000002",
+    "ИН0000035",
+    "000000018",
+    "DI0000527",
 ]
 
 
@@ -78,27 +80,31 @@ async def goodRequestsCleaner():
     MDB.GoodsRequests.delete_many(
         dict(CreatedAt={"$lt": datetime.datetime.now() - datetime.timedelta(days=1)}))
 
-
 async def diforceUsersSync():
     loguru.logger.info("[DIFORCE-USERS]: Start sync users")
     try:
         users = OneService.getUsers()
-        g_users = []
+        user_groups = OneService.getUsersGroups()
+        filtered_users = []
+        excluded_user_groups = set()
         # Change users objects
         for x_user in users:
             if x_user['Phone']:
                 x_user['Phone'] = format_phone_number(x_user['Phone'])
-            if x_user['ContractType'] in ALLOWED_CONTRACT_TYPES:
-                g_users.append(x_user)
-
+            if is_in_group_hierarchy(x_user['GroupID'], ALLOWED_USER_GROUPS, user_groups):
+                filtered_users.append(x_user)
+            else:
+                g = [x for x in user_groups if x['GroupID'] == x_user['GroupID']]
+                excluded_user_groups.add(g[0]['GroupName'] if g else '???')
+                
+        print(excluded_user_groups)
         MDB.DiforceUsers.delete_many({})
-        for g_user in g_users:
-            MDB.DiforceUsers.insert_one(g_user)
+        for f_user in filtered_users:
+            MDB.DiforceUsers.insert_one(f_user)
     except Exception as e:
         loguru.logger.error(
             f"[DIFORCE-USERS]: Can't sync diforce users!: {e}; traceback: {traceback.format_exc()}")
     loguru.logger.info(f"[CATALOG]: Users synced")
-
 
 def diforceUsersSyncWrapper():
     while True:
