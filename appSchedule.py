@@ -25,6 +25,15 @@ FORBIDDEN_GROUP_IDS = [
     "DI000007050",
 ]
 
+ALLOWED_CONTRACT_TYPES = [
+    "КРУПНЫЙ ОПТ",
+    "ПОКУПАТЕЛИ ОПТОВЫЕ",
+    "МЕЛКООПТОВААЯ", 
+    "ОПТОВАЯ",
+    "СПЕЦ ЦЕНА ОПТОВАЯ"
+]
+
+
 def fillCatalog(catalog, data, head):
     for xCategory in data:
         if xCategory['GroupID'] in FORBIDDEN_GROUP_IDS:
@@ -49,7 +58,8 @@ async def catalogTreeSync():
         MDB.Settings.insert_one(dict(id="Catalog"))
     MDB.Settings.update_one(dict(id="Catalog"), {
                             "$set": dict(catalog=catalog)})
-    loguru.logger.success(f"[CATALOG]: Catalogs tree has been updated successfully within {time.time() - startTime} seconds")
+    loguru.logger.success(
+        f"[CATALOG]: Catalogs tree has been updated successfully within {time.time() - startTime} seconds")
 
 
 async def catalogGoodsSync():
@@ -60,38 +70,49 @@ async def catalogGoodsSync():
     loguru.logger.info(f"[CATALOG]: All goods was deleted")
     for x in data:
         MDB.Goods.insert_one(x)
-    loguru.logger.success(f"[CATALOG]: Catalogs has been updated successfully within {time.time() - startTime} seconds")
+    loguru.logger.success(
+        f"[CATALOG]: Catalogs has been updated successfully within {time.time() - startTime} seconds")
+
 
 async def goodRequestsCleaner():
-    MDB.GoodsRequests.delete_many(dict(CreatedAt={"$lt": datetime.datetime.now() - datetime.timedelta(days=1)}))
+    MDB.GoodsRequests.delete_many(
+        dict(CreatedAt={"$lt": datetime.datetime.now() - datetime.timedelta(days=1)}))
+
 
 async def diforceUsersSync():
     loguru.logger.info("[DIFORCE-USERS]: Start sync users")
     try:
         users = OneService.getUsers()
+        g_users = []
         # Change users objects
         for x_user in users:
             if x_user['Phone']:
                 x_user['Phone'] = format_phone_number(x_user['Phone'])
+            if x_user['ContractType'] in ALLOWED_CONTRACT_TYPES:
+                g_users.append(x_user)
+
         MDB.DiforceUsers.delete_many({})
-        for x in users:
-            MDB.DiforceUsers.insert_one(x)
+        for g_user in g_users:
+            MDB.DiforceUsers.insert_one(g_user)
     except Exception as e:
-        loguru.logger.error(f"[DIFORCE-USERS]: Can't sync diforce users!: {e}; traceback: {traceback.format_exc()}")
+        loguru.logger.error(
+            f"[DIFORCE-USERS]: Can't sync diforce users!: {e}; traceback: {traceback.format_exc()}")
     loguru.logger.info(f"[CATALOG]: Users synced")
-    
-    
+
+
 def diforceUsersSyncWrapper():
     while True:
         asyncio.run(diforceUsersSync())
         time.sleep(2000)
-        
 
-th1 = Thread(target=diforceUsersSyncWrapper, name="Sync users from diforce thread")
+
+th1 = Thread(target=diforceUsersSyncWrapper,
+             name="Sync users from diforce thread")
 th1.start()
 schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogTreeSync()))
 schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogGoodsSync()))
-schedule.every(50).minutes.at(":37").do(lambda: asyncio.run(goodRequestsCleaner()))
+schedule.every(50).minutes.at(":37").do(
+    lambda: asyncio.run(goodRequestsCleaner()))
 
 loguru.logger.info("Starting scheduler")
 

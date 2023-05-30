@@ -3,10 +3,11 @@ import copy
 import datetime
 import random
 import traceback
-from typing import List
+from typing import Any, List, Union
 from uuid import uuid4
 import aiogram
 import loguru
+import pymongo
 from etc.helpers import wrap_media
 from etc.keyboards import Keyboards
 from loader import MDB, dp, message_id_links, bot
@@ -38,15 +39,15 @@ RIGHT_STEP = 20
 def search_objects(objects_list, search_query):
     lemmatizer = WordNetLemmatizer()
     try:
-        tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query)]
+        tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query.lower())]
     except LookupError as e:
         loguru.logger.error("LookupError")
         nltk.download('punkt')
         nltk.download('wordnet')
-        tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query)]
+        tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query.lower())]
     results = []
     for obj in objects_list:
-        tokens_obj = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(f"{obj['Manufacturer']} {obj['ProductName']} {obj['ProductArt']}")]
+        tokens_obj = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(f"{obj['Manufacturer'].lower()} {obj['ProductName'].lower()} {obj['ProductArt']}")]
         score = 0
         for token in tokens_query:
             if token in tokens_obj:
@@ -152,6 +153,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         
         subcats_dfs = get_category_tree(cat, [], categories)
         extended_goods = [x for x in list(MDB.Goods.find()) if x['GroupID'] in subcats_dfs]
+        req_id = None
         if extended_goods:
             req_id = str(uuid4())[:9]
             MDB.GoodsRequests.insert_one(dict(
@@ -233,13 +235,13 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             await state.set_state("PriceFilterState")
         else:  # action == "brand_filter"
             req_id = stateData.get('req_id', None)
-
             
             if req_id is not None:
-                req = MDB.GoodsRequests.find_one(dict(ID=req_id))
+                req: Any = MDB.GoodsRequests.find_one(dict(ID=req_id))
                 goods = apply_req(req, user)
             else:
                 goods = list(MDB.Goods.find(dict(GroupID=category_group_id)))
+                req = None
                 
             selected_brands = stateData.get("selected_brands", [])
             all_brands = set(x['Manufacturer'] for x in goods)
@@ -253,7 +255,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         choosen_brand = action_params[0]
         selected_brands = stateData.get("selected_brands", [])
         all_brands = stateData.get("all_brands", [])
-        req = MDB.GoodsRequests.find_one(dict(ID=stateData.get('req_id', None)))
+        req: Any = MDB.GoodsRequests.find_one(dict(ID=stateData.get('req_id', None)))
 
         if choosen_brand in selected_brands:
             selected_brands.remove(choosen_brand)
@@ -281,19 +283,13 @@ async def _(c: CallbackQuery, state: FSMContext=None):
                 ID=req_id,
                 GoodsIDs=[x['ProductID'] for x in extended_goods],
                 CategoryID=catID,
-                AppliedFilters={'PriceFilter':{'min_price': min_price, 'max_price': max_price}},
-                CreatedAt=datetime.datetime.now()
-            )
-            MDB.GoodsRequests.insert_one(dict(
-                ID=req_id,
-                GoodsIDs=[x['ProductID'] for x in extended_goods],
-                CategoryID=catID,
                 AppliedFilters={'BrandFilter': {"Brands": selected_brands}},
                 CreatedAt=datetime.datetime.now()
-            ))
+            )
+            MDB.GoodsRequests.insert_one(req)
             goods = apply_req(req, user)
         else:
-            req = MDB.GoodsRequests.find_one(dict(ID=stateData['req_id']))
+            req: Any = MDB.GoodsRequests.find_one(dict(ID=stateData['req_id']))
             req['AppliedFilters']['BrandFilter'] = {"Brands": selected_brands}
             MDB.GoodsRequests.update_one(dict(ID=stateData['req_id']), {"$set": req})
             goods = apply_req(req, user)
@@ -327,15 +323,16 @@ async def _(c: CallbackQuery, state: FSMContext):
     start_index = int(start_index)
 
     user = UserService.Get(c.from_user.id)
-    request = MDB.GoodsRequests.find_one(dict(ID=req_id))
+    req: Any = MDB.GoodsRequests.find_one(dict(ID=req_id))
     categories = GoodsService.GetCategoriesTree()
-    category = GoodsService.GetCategoryByID(request['CategoryID'], categories)
-    goods = list(MDB.Goods.find(dict(ProductID={"$in": request['GoodsIDs']}, QtyInStore={"$gt": 0})))
+    category = GoodsService.GetCategoryByID(req['CategoryID'], categories)
+    goods = list(MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']}, QtyInStore={"$gt": 0})))
+    goods = apply_req(req, user)
 
     if mode == "left":
         start_index = max(0, start_index - 20)
     if mode == "right":
-        start_index = min(len(request['GoodsIDs']), start_index + 20)
+        start_index = min(len(req['GoodsIDs']), start_index + 20)
 
     try:
         await c.message.edit_reply_markup(reply_markup=Keyboards.filteredGoods(category, goods, req_id, start_index))
