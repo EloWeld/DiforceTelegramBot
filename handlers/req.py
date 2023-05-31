@@ -59,7 +59,7 @@ def search_objects(objects_list, search_query):
 
 
 def apply_req(req: dict, user):
-    goods = MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']}, QtyInStore={"$gt": 0}))
+    goods = list(MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']}, QtyInStore={"$gt": 0})))
     if 'PriceFilter' in req['AppliedFilters']:
         pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
         min_price = req['AppliedFilters']['PriceFilter']['min_price']

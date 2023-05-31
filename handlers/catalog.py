@@ -7,6 +7,7 @@ import loguru
 from etc.filters import AntiSpam
 from etc.helpers import rdotdict, wrap_media
 from etc.keyboards import Keyboards
+from handlers.identification import Form
 from handlers.req import apply_req, get_category_tree
 from loader import MDB, dp, bot, Consts, message_id_links
 from io import BytesIO
@@ -77,7 +78,7 @@ async def _(m: Message, state: FSMContext):
     # переход в состояние phone_email для получения номера телефона/email
     await Form.phone_email.set()
 
-
+from handlers.profile import get_personal_cabinet_text
 @dp.message_handler(Text(Texts.Profile), state="*")
 async def show_personal_cabinet(m: Message, state: FSMContext):
     if state:

@@ -128,5 +128,9 @@ asyncio.run(catalogGoodsSync())
 
 
 while True:
-    schedule.run_pending()
+    try:
+        schedule.run_pending()
+    except Exception as e:
+        loguru.logger.error(e)
+        
     time.sleep(1)
