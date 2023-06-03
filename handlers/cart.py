@@ -20,7 +20,7 @@ from services.oneService import OneService
 from services.orderService import OrderService
 from services.textService import Texts, verbose
 from services.userService import UserService
-from utils import cutText, format_phone_number, prepareCartItemToSend, prepareGoodItemToSend
+from utils import cutText, format_phone_number, prepareCartItemToSend, prepareGoodItemToSend, tryDelete
 
 
 async def sendCartItem(good, cartItem, user):
@@ -57,6 +57,14 @@ async def remove_from_cart(c, user, goodsID, good, cartItem):
     await c.message.delete()
     await asyncio.sleep(0.3)
     await showCart()
+    
+async def remove_from_cart_2(c: CallbackQuery, user, goodsID, good, cartItem):
+    del user.cart[goodsID]
+    UserService.Update(user)
+
+    await c.answer(Texts.CartItemRemoved)
+    text = prepareGoodItemToSend(good, user)
+    await c.message.edit_text(text, reply_markup=Keyboards.goodOptions(user, good))
 
 async def increment_cart_item_count(c, user, goodsID, good, cartItem):
     if good['QtyInStore'] < user.cart[goodsID]['Quantity'] + 1:
@@ -116,7 +124,11 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
     if m.text.isdigit() and int(m.text) > 0:
         quantity = int(m.text)
     else:
-        await m.answer(Texts.IncorrectQuantity)
+        ans = await m.answer(Texts.IncorrectQuantity)
+        await asyncio.sleep(3)
+        await tryDelete(m)
+        await tryDelete(ans)
+        
         return
 
     user = UserService.Get(m.from_user.id)
@@ -124,7 +136,10 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
     good = GoodsService.GetGoodByID(stateData['cartItemID'], False)
     
     if quantity > good['QtyInStore']:
-        await m.answer(f"❌ {quantity} единиц товара нет на складе, максимальное количество - <code>{good['QtyInStore']}</code>. Количество не изменено, введите ещё раз")
+        ans = await m.answer(f"❌ {quantity} единиц товара нет на складе, максимальное количество - <code>{good['QtyInStore']}</code>. Количество не изменено, введите ещё раз")
+        await asyncio.sleep(3)
+        await tryDelete(m)
+        await tryDelete(ans)
         return
     
     for x in user.cart:
@@ -134,12 +149,21 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
             break
         
     if good['QtyInStore'] == 0:
-        await m.answer(f"❌ {quantity} единиц товара нет на складе, количество не изменено")
+        ans = await m.answer(f"❌ {quantity} единиц товара нет на складе, количество не изменено")
+        await asyncio.sleep(3)
+        await tryDelete(m)
+        await tryDelete(ans)
         return
 
     UserService.Update(user)
     if stateData['from_adding']:
-        await m.answer(f"✅ Количество изменено на <code>{quantity}шт</code>!", reply_markup=Keyboards.startMenu(user))
+        ans = await m.answer(f"✅ Количество изменено на <code>{quantity}шт</code>!", reply_markup=Keyboards.startMenu(user))
+        if 'msg_from_good_msg' in stateData:
+            text = prepareCartItemToSend(good, cartItem, user)
+            await stateData['msg_from_good_msg'].edit_text(text, reply_markup=stateData['msg_from_good_msg'].reply_markup)
+        await asyncio.sleep(3)
+        await tryDelete(m)
+        await tryDelete(ans)
     else:
         await sendCartItem(good, cartItem, user)
 
@@ -166,6 +190,11 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
     if action == "cancel_scq":
         await state.finish()
         await c.message.delete()
+    if action == "cancel_scq_2":
+        stateData = await state.get_data()
+        text = prepareCartItemToSend(MDB.Goods.find_one(dict(ProductID= stateData['cartItemID'])), [user['cart'][x] for x in user['cart'] if x == stateData['cartItemID']][0], user)
+        await c.message.edit_text(text, reply_markup=stateData['saved_reply_markup'])
+        await state.finish()
     if action == "specify_cart_quantity":
         cartItemID = c.data.split(":")[2]
         await c.message.answer(Texts.SpecifyCartQuantity, reply_markup=Keyboards.CancelCartQuantity())
@@ -173,13 +202,15 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         await state.update_data(cartItemID=cartItemID, from_adding=False)
     if action == "specify_cart_quantity_2":
         cartItemID = c.data.split(":")[2]
-        await c.message.edit_text(Texts.SpecifyCartQuantity, reply_markup=Keyboards.CancelCartQuantity())
+        await state.update_data(saved_reply_markup=c.message.reply_markup)
+        await c.message.edit_text(Texts.SpecifyCartQuantity, reply_markup=Keyboards.CancelCartQuantity2())
         await state.set_state("cart_product_quantity")
-        await state.update_data(cartItemID=cartItemID, from_adding=True)
+        await state.update_data(cartItemID=cartItemID, from_adding=True, msg_from_good_msg=c.message)
 
     actions = {
         "dec_count": decrement_cart_item_count,
         "remove_from_cart": remove_from_cart,
+        "remove_from_cart_2": remove_from_cart_2,
         "inc_count": increment_cart_item_count,
         "see_cart_item": send_cart_item
     }

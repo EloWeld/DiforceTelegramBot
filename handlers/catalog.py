@@ -8,6 +8,7 @@ from etc.filters import AntiSpam
 from etc.helpers import rdotdict, wrap_media
 from etc.keyboards import Keyboards
 from handlers.identification import Form
+from handlers.profile import get_personal_cabinet_text
 from handlers.req import apply_req, get_category_tree
 from loader import MDB, dp, bot, Consts, message_id_links
 from io import BytesIO
@@ -38,6 +39,25 @@ from etc.filters import Admin
 # ░▐█▀█─░▄█▀▄─▒█▀█▀█─░▄█▀▄─▒██░░░▒▐█▀▀█▌░▐█▀▀▀─
 # ░▐█──░▐█▄▄▐█░░▒█░░░▐█▄▄▐█▒██░░░▒▐█▄▒█▌░▐█░▀█▌
 # ░▐█▄█░▐█─░▐█░▒▄█▄░░▐█─░▐█▒██▄▄█▒▐██▄█▌░▐██▄█▌
+
+
+@dp.message_handler(Text(Texts.BigSearch), AntiSpam(), ChatTypeFilter(ChatType.PRIVATE), state="*")
+async def _(m: Message, state: FSMContext):
+    if state:
+        await state.finish()
+    req_id = None
+    category_id = "None"
+    if '-' in category_id:
+        req_id = category_id
+        await state.update_data(req_id=req_id, category_id=None)
+    else:
+        category_id = category_id if category_id != "None" else None
+        await state.update_data(category_id=category_id)
+
+    msg = await m.answer(Texts.EnterSearchQuery, reply_markup=Keyboards.SearchQuery())
+    await state.set_state("search")
+
+    await state.update_data(msg_id=msg.message_id)
 
 
 @dp.message_handler(Text(Texts.CatalogButton), AntiSpam(), ChatTypeFilter(ChatType.PRIVATE), state="*")

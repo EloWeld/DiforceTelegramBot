@@ -62,10 +62,10 @@ async def parseStartMessage(m: Message):
             mid = await m.answer_media_group(media_group)
             from loader import message_id_links
             message_id_links[str(mid[0].message_id)] = [x.message_id for x in mid]
-            keyboard = Keyboards.goodOptions(good, mid[0].message_id)
+            keyboard = Keyboards.goodOptions(user, good, mid[0].message_id)
             await m.answer(messageText, reply_markup=keyboard)
         else:
-            keyboard = Keyboards.goodOptions(good)
+            keyboard = Keyboards.goodOptions(user, good)
             await m.answer(messageText, reply_markup=keyboard)
 
 @dp.message_handler(CommandStart(), AntiSpam(), state="*")

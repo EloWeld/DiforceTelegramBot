@@ -16,6 +16,7 @@ verbose = {None: "Не указано", "non_cash": "💳 Безнал", "cash":
 class TextsMetaClass(type):
 
     __defaultTexts = dict(
+        BigSearch="🔎 Глобальный поиск",
         # Start
         StartMessage="Добро пожаловать в Diforce!",
         # Menu buttons
@@ -59,7 +60,7 @@ class TextsMetaClass(type):
         StoreQuantsButton="📦 Наличие на складах",
 
         # Good suboptions
-        AddedToCart="✅ 1шт. Добавлено в корзину! \n\n<i>Чтобы изменить количество добавленное в корзину - нажмите на кнопку</i>",
+        AddedToCart="✅ 1шт. Добавлено в корзину!",
         ChangeAmount="Указать количество",
         YourRequestWasSentMessage="Ваше направление отпрпавлено нашим модераторам! Скоро мы на него ответим 😊",
         QuantityInStores="""
@@ -81,9 +82,9 @@ class TextsMetaClass(type):
         MakeAnOrderButton="🛎️ Оформить заказ",
         ClearCart="🗑️ Очистить корзину",
         ClickRemovePopup="Чтобы убрать товар из корзины - нажмите \"{btn}\"",
-        CartItemRemoved="✅Товар убран из корзины",
-        DecrementButton="-1",
-        IncrementButton="+1",
+        CartItemRemoved="✅🗑️ Товар убран из корзины",
+        DecrementButton="➖1️⃣",
+        IncrementButton="➕1️⃣",
         RemoveButton="🗑️",
         
         # Profile
@@ -126,6 +127,7 @@ class TextsMetaClass(type):
         CancelSearchButton="❌ Отменить",
         SearchResults="Результаты поиска ({found_count})",
         SpecifyCartQuantity="✏️ Укажите количество",
+        SpecifyCartQuantity2="🛒✏️ Укажите количество",
         IncorrectQuantity="❌ Некорректное количество",
         PriceFilter="💶🎚 Цена",
         BrandFilter="🔖🎚 Бренд",

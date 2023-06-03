@@ -24,7 +24,7 @@ import base64
 
 from services.textService import Texts
 from services.userService import UserService
-from utils import prepareGoodItemToSend
+from utils import prepareGoodItemToSend, process_string
 from PIL import Image
 from io import BytesIO
 import nltk
@@ -37,24 +37,22 @@ RIGHT_STEP = 20
 
 
 def search_objects(objects_list, search_query):
-    lemmatizer = WordNetLemmatizer()
-    try:
-        tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query.lower())]
-    except LookupError as e:
-        loguru.logger.error("LookupError")
-        nltk.download('punkt')
-        nltk.download('wordnet')
-        tokens_query = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(search_query.lower())]
+    tokens_query = process_string(search_query)
+    query_tokens_len = len(tokens_query)
     results = []
     for obj in objects_list:
-        tokens_obj = [lemmatizer.lemmatize(token.lower()) for token in word_tokenize(f"{obj['Manufacturer'].lower()} {obj['ProductName'].lower()} {obj['ProductArt']}")]
+        tokens_obj = process_string(f"{obj['Manufacturer']} {obj['ProductName']} {obj['ProductArt']}")
         score = 0
+        if search_query.isdigit() and obj['ProductArt'].endswith(search_query) and len(search_query) >= 4:
+            results.append((obj, score))
+            continue
         for token in tokens_query:
             if token in tokens_obj:
                 score += 1
-        if score > 0:
+        if score >= query_tokens_len:
             results.append((obj, score))
     r = sorted(results, key=lambda x: x[1], reverse=True)
+            
     return [x[0] for x in r]
 
 
@@ -187,7 +185,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         loguru.logger.info(f"See good: {goodID}")
         await c.answer()
         sessionID = str(uuid4())[:9]
-        keyboard = Keyboards.goodOptions(good, media_group_message_id=sessionID)
+        keyboard = Keyboards.goodOptions(user, good, media_group_message_id=sessionID)
         
         # Ooooh fuck... saving in state message ids for goods to delete messages in future
         mg = MediaGroup()

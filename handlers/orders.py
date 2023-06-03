@@ -22,6 +22,19 @@ from services.textService import Texts, verbose
 from services.userService import UserService
 from utils import cutText, format_phone_number, prepareCartItemToSend, prepareGoodItemToSend
 
+
+async def get_order_text(state: FSMContext, user):
+    stateData = await state.get_data()
+    p = stateData.get('pay_method', None)
+    d = stateData.get('deliv_method', None)
+
+    address = next((x["Name"] for x in user["addresses"] if x["ID"]
+                   == stateData.get("deliv_address_id", None)), None)
+    address_text = f'Адрес доставки: <b>{address}</b>\n' if d == 'delivery' and address else ''
+    text = f"\n\nМетод оплаты: <b>{verbose[p]}</b>\nМетод доставки: <b>{verbose[d]}</b>\n{address_text}"
+    return "✅ Все товары из корзины есть на складе в достаточном количестве. Укажите метод оплаты и доставки и подтвердите создание заказа" + text
+
+
 @dp.message_handler(state="AddDeliveryAddress")
 async def _(m: Message, state: FSMContext):
     if len(m.text) > 1000:
@@ -39,7 +52,7 @@ async def _(m: Message, state: FSMContext):
     await m.answer("Укажите адрес доставки",
                    reply_markup=Keyboards.DelivAddress(user,
                                                        stateData.get(
-                                                           'deliv_method', None), 
+                                                           'deliv_method', None),
                                                        stateData.get(
                                                            'deliv_address_id', None)
                                                        ))
@@ -56,30 +69,36 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         p = stateData.get('pay_method', None)
         d = stateData.get('deliv_method', None)
 
-        text = f"\n\nМетод оплаты: <b>{verbose[p]}</b>\nМетод доставки: <b>{verbose[d]}</b>\n"
-        await c.message.edit_text(text="✅ Все товары из корзины есть на складе в достаточном количестве. Укажите метод оплаты и доставки и подтвердите создание заказа"+text,
+        await c.message.edit_text(text=await get_order_text(state, user),
                                   reply_markup=Keyboards.ConfirmOrder(p, d))
 
     if action == "choose_pay_method":
+        await c.answer()
         method = c.data.split(":")[2]
         await state.update_data(pay_method=method)
         stateData = await state.get_data()
         p = stateData.get('pay_method', None)
         d = stateData.get('deliv_method', None)
 
-        text = f"\n\nМетод оплаты: <b>{verbose[p]}</b>\nМетод доставки: <b>{verbose[d]}</b>\n"
-        await c.message.edit_text("✅ Все товары из корзины есть на складе в достаточном количестве. Укажите метод оплаты и доставки и подтвердите создание заказа"+text,
+        await c.message.edit_text(text=await get_order_text(state, user),
                                   reply_markup=Keyboards.ConfirmOrder(p, d))
     if action == "choose_address":
-        address_id = c.data.split(":")[2]
-        await state.update_data(deliv_address_id=address_id)
-        is_delivery = (await state.get_data()).get('deliv_method', None) == "delivery"
+        await c.answer()
+        stateData = await state.get_data()
+        if 'deliv_address_id' in stateData:
+            await state.set_data({x: y for x, y in stateData.items() if x != 'deliv_address_id'})
+            address_id = -1
+        else:
+            address_id = c.data.split(":")[2]
+            await state.update_data(deliv_address_id=address_id)
+        is_delivery = stateData.get('deliv_method', None) == "delivery"
         await c.message.edit_text("Укажите адрес доставки", reply_markup=Keyboards.DelivAddress(user, is_delivery, address_id))
 
     if action == "choose_deliv_method":
         method = c.data.split(":")[2]
         stateData = await state.get_data()
         if method == "delivery":
+            await c.answer()
             is_delivery = stateData.get('deliv_method', None) == 'delivery'
             deliv_address_id = stateData.get('deliv_address_id', None)
             await c.message.edit_text("Укажите адрес доставки", reply_markup=Keyboards.DelivAddress(user, is_delivery, deliv_address_id))
@@ -90,18 +109,26 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
                 await c.answer("！ Выберите адрес ！", show_alert=True)
                 return
             method = method.replace("_true", '')
+            if 'deliv_method' in stateData and stateData['deliv_method'] == 'delivery':
+                await state.update_data(deliv_method=None)
+                is_delivery = False
+            else:
+                is_delivery = True
+                await state.update_data(deliv_method='delivery')
+            await c.answer()
+            await c.message.edit_text("Укажите адрес доставки", reply_markup=Keyboards.DelivAddress(user, is_delivery, deliv_address_id))
+            return
+        await c.answer()
         await state.update_data(deliv_method=method)
         stateData = await state.get_data()
         p = stateData.get('pay_method', None)
         d = stateData.get('deliv_method', None)
 
-        text = f"\n\nМетод оплаты: <b>{verbose[p]}</b>\nМетод доставки: <b>{verbose[d]}</b>\n"
-
-        await c.message.edit_text("✅ Все товары из корзины есть на складе в достаточном количестве. Укажите метод оплаты и доставки и подтвердите создание заказа"+text,
+        await c.message.edit_text(text=await get_order_text(state, user),
                                   reply_markup=Keyboards.ConfirmOrder(p, d))
 
     if action == "add_deliv_address":
-        await c.message.edit_text("🚛 Укажите адрес доставки\n\nПример: 141007, Красноярск, улица Горького, 14", 
+        await c.message.edit_text("🚛 Укажите адрес доставки\n\nПример: 141007, Красноярск, улица Горького, 14",
                                   reply_markup=Keyboards.back("|OrderActions:choose_deliv_method:delivery"))
         await state.set_state("AddDeliveryAddress")
 
@@ -127,12 +154,14 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         cart = user.get('cart', {})
         for product_id, cartItem in cart.items():
             good = MDB.Goods.find_one({'ProductID': product_id})
-            cartItem['Price'] = GoodsService.GetTargetPrice(user, good) if good else -1
+            cartItem['Price'] = GoodsService.GetTargetPrice(
+                user, good) if good else -1
 
         try:
             success_order_data = OneService.CreateOrder(user, storeID)
         except Exception as e:
-            loguru.logger.error(f"Error on create order {e}: {traceback.format_exc()}")
+            loguru.logger.error(
+                f"Error on create order {e}: {traceback.format_exc()}")
             await c.message.answer("❌ не удалось создать заказ в 1С!")
             return
 
@@ -176,7 +205,8 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
                     order_text += f"<code>{quantity} шт</code> * <code>{price}₽</code> = <code>{item_total}₽</code> | <code>{product_id}</code> | <b>{cartItem['ProductName']}</b>\n\n"
 
-                formatted_summary = f"Общая стоимость корзины: <code>{full_cart_summary:,}₽</code>".replace(',', ' ')
+                formatted_summary = f"Общая стоимость корзины: <code>{full_cart_summary:,}₽</code>".replace(
+                    ',', ' ')
                 order_text += formatted_summary
                 order_text += f"\n\n🚩 Адрес доставки: <code>{order_data.get('DeliveryAddress', 'Не указан')}</code>\n"
                 order_text += f"🚩 Способ доставки: <code>{verbose[order_data['DeliveryMethod']]}</code>\n"
@@ -186,10 +216,12 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
                 user_info_text += f"📧📞 Email/Тел.: <code>{user['diforce_data'].get('Email', '/').replace('<', '').replace('>', '')}</code>/<code>{format_phone_number(user['diforce_data'].get('Phone', ''))}</code>\n"
                 user_info_text += f"🏷️💲 Тип цен: <code>{verbose[user['opt']]}</code>\n"
 
-                order_manager_message = f"⭐ Пользователь <a href='tg://user?id={user.id}'>{user.fullname}</a> (@{user.username}) Сделал заказ!\n\n" + user_info_text + order_text
+                order_manager_message = f"⭐ Пользователь <a href='tg://user?id={user.id}'>{user.fullname}</a> (@{user.username}) Сделал заказ!\n\n" + \
+                    user_info_text + order_text
                 await bot.send_message(Consts.OrderManagerID, order_manager_message)
             except Exception as e:
-                loguru.logger.error(f"Can't send message to user about order: {e}, {traceback.format_exc()}")
+                loguru.logger.error(
+                    f"Can't send message to user about order: {e}, {traceback.format_exc()}")
         else:
             await c.message.answer("❌ Не удалось создать заказ в 1С!")
 
@@ -208,13 +240,14 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             if good:
                 try:
                     good['QtyInStore'] = [x for x in good['QuantityInStores']
-                                        if x['store_id'] == "000000001"][0]['quantity']
+                                          if x['store_id'] == "000000001"][0]['quantity']
                 except Exception:
                     good['QtyInStore'] = 0
                 cartItem['Price'] = GoodsService.GetTargetPrice(user, good)
                 goods.append(good)
 
-            cartItem['good_item'] = good if good is not None else dict(QtyInStore=0)
+            cartItem['good_item'] = good if good is not None else dict(
+                QtyInStore=0)
 
         can_order = True
         for key, cItem in cartItems.items():

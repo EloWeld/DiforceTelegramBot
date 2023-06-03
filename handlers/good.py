@@ -25,7 +25,7 @@ from dotdict import dotdict
 
 from services.textService import Texts
 from services.userService import UserService
-from utils import cutText, tryDelete
+from utils import cutText, prepareCartItemToSend, prepareGoodItemToSend, tryDelete
 
 @dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|Good:", state="*")
 async def _(c: CallbackQuery, state: FSMContext):
@@ -34,14 +34,18 @@ async def _(c: CallbackQuery, state: FSMContext):
     user = UserService.Get(c)
 
     if action == "add_to_cart":
-        await c.answer()
         goodID = c.data.split(":")[2]
         good = GoodsService.GetGoodByID(goodID)
         if good['QtyInStore'] == 0:
+            await c.answer()
             await c.message.answer("❌ Товара нет на складе, добавить в корзину невозможно")
             return
+        await c.answer(Texts.AddedToCart)
         UserService.AddToCart(user.id, good)
-        await c.message.answer(Texts.AddedToCart, reply_markup=Keyboards.addedToCart(good))
+        user = UserService.Get(user.id)
+        text = prepareCartItemToSend(good, [user['cart'][x] for x in user['cart'] if x == goodID][0], user)
+        await c.message.edit_text(text, reply_markup = Keyboards.goodOptions(user, good))
+        
 
     if action == "found_cheaper":
         await c.answer()

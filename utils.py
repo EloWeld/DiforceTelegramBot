@@ -117,3 +117,15 @@ def is_in_group_hierarchy(user_group, target_groups, groups):
             return is_in_group_hierarchy(group['HeadGroupID'], target_groups, groups)
 
     return False
+
+def process_string(input_string):
+    # Заменить все символы, знаки препинания и специальные символы на пробелы
+    cleaned_string = re.sub(r'[^\w\s]', ' ', input_string.lower())
+    
+    # Разбить строку на слова
+    words = cleaned_string.split()
+    
+    # Удалить пустые строки из массива слов
+    words = [word for word in words if word.strip()]
+    
+    return words

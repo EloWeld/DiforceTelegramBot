@@ -39,6 +39,7 @@ class Keyboards:
     @staticmethod
     def startMenu(user=None):
         k = Keyboard(resize_keyboard=True)
+        k.row(Texts.BigSearch)
         k.row()
         k.insert(Texts.CatalogButton)
         k.insert(Texts.CartButton)
@@ -219,10 +220,21 @@ class Keyboards:
         
 
     @staticmethod
-    def goodOptions(good, media_group_message_id=None):
-        k = IKeyboard(row_width=1)
-        k.row(IButton(Texts.AddToCartButton,
-              callback_data=f"|Good:add_to_cart:{good['ProductID']}"))
+    def goodOptions(user, good, media_group_message_id=None):
+        k = IKeyboard(row_width=3)
+        if good['ProductID'] not in user['cart']:
+            k.row(IButton(Texts.AddToCartButton,
+                callback_data=f"|Good:add_to_cart:{good['ProductID']}:{media_group_message_id}"))
+        else:
+            k.row()
+            k.insert(IButton(Texts.DecrementButton,
+                    callback_data=f"|Cart:dec_count:{good['ProductID']}:{media_group_message_id}"))
+            k.insert(IButton(Texts.RemoveButton + " Удалить",
+                    callback_data=f"|Cart:remove_from_cart_2:{good['ProductID']}:{media_group_message_id}"))
+            k.insert(IButton(Texts.IncrementButton,
+                    callback_data=f"|Cart:inc_count:{good['ProductID']}:{media_group_message_id}"))
+            k.row(IButton(Texts.SpecifyCartQuantity2, callback_data=f"|Cart:specify_cart_quantity_2:{good['ProductID']}:{media_group_message_id}"))
+        
         k.row(IButton(Texts.FoundCheaperButton,
               callback_data=f"|Good:found_cheaper:{good['ProductID']}"))
         # k.row(IButton(Texts.StoreQuantsButton,
@@ -270,6 +282,12 @@ class Keyboards:
     def CancelCartQuantity():
         k = IKeyboard(row_width=3)
         k.row(IButton(Texts.Cancel, callback_data=f"|Cart:cancel_scq"))
+        return k
+
+    @staticmethod
+    def CancelCartQuantity2():
+        k = IKeyboard(row_width=3)
+        k.row(IButton(Texts.Cancel, callback_data=f"|Cart:cancel_scq_2"))
         return k
     
     @staticmethod
