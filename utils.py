@@ -33,7 +33,7 @@ async def tryDelete(msg):
 
 def prepareUserToPrint(xUser):
     xUser.roles = ', '.join([Texts.rus(x) for x in xUser.roles])
-    xUser.opt = Texts.rus(xUser.opt)
+    xUser.opt = xUser['diforce_data']['ContractType'] if 'diforce_data' in xUser and xUser['diforce_data'] else Texts.rus(xUser.opt)
     return xUser
 
 def cutText(text: str, limit: int):

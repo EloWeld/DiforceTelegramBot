@@ -214,11 +214,11 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
                 user_info_text = f"👤 ФИО: <code>{user['diforce_data']['FullName']}</code>\n"
                 user_info_text += f"📧📞 Email/Тел.: <code>{user['diforce_data'].get('Email', '/').replace('<', '').replace('>', '')}</code>/<code>{format_phone_number(user['diforce_data'].get('Phone', ''))}</code>\n"
-                user_info_text += f"🏷️💲 Тип цен: <code>{verbose[user['opt']]}</code>\n"
+                user_info_text += f"🏷️💲 Тип цен: <code>{user['diforce_data']['ContractType']}</code>\n"
 
                 order_manager_message = f"⭐ Пользователь <a href='tg://user?id={user.id}'>{user.fullname}</a> (@{user.username}) Сделал заказ!\n\n" + \
                     user_info_text + order_text
-                await bot.send_message(Consts.OrderManagerID, order_manager_message)
+                await bot.send_message(Consts.OrderManagerID, order_manager_message, reply_markup=types.ReplyKeyboardRemove())
             except Exception as e:
                 loguru.logger.error(
                     f"Can't send message to user about order: {e}, {traceback.format_exc()}")
