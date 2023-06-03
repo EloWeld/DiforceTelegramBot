@@ -9,7 +9,7 @@ from etc.helpers import rdotdict, wrap_media
 from etc.keyboards import Keyboards
 from loader import MDB, dp, bot, Consts, message_id_links
 from io import BytesIO
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from fuzzywuzzy import fuzz
 
 from aiogram import Bot, types
@@ -44,7 +44,7 @@ async def _(c: CallbackQuery, state: FSMContext):
         UserService.AddToCart(user.id, good)
         user = UserService.Get(user.id)
         text = prepareCartItemToSend(good, [user['cart'][x] for x in user['cart'] if x == goodID][0], user)
-        await c.message.edit_text(text, reply_markup = Keyboards.goodOptions(user, good))
+        await c.message.edit_text(text, reply_markup = Keyboards.goodOptions(user, good, media_group_message_id=c.data.split(":")[3]))
         
 
     if action == "found_cheaper":
@@ -64,7 +64,11 @@ async def _(c: CallbackQuery, state: FSMContext):
             
             def process_image(image):
                 b_img = base64.b64decode(image)
-                img = Image.open(BytesIO(b_img))
+                try:
+                    img = Image.open(BytesIO(b_img))
+                except UnidentifiedImageError:
+                    loguru.logger.error('Failed to identify the image')
+                    return None
                 img_size = img.size
                 if img_size[0] * img_size[1] > 160000:
                     return wrap_media(b_img) # Возвращаем обернутое изображение, если размеры соответствуют условию
@@ -101,14 +105,12 @@ async def _(c: CallbackQuery, state: FSMContext):
     if action == "hide":
         await c.answer()
         mid = c.data.split(":")[2]
-        good_pictures_msgs = (await state.get_data()).get('good_pictures_msgs', {})
+        stateData = await state.get_data()
+        good_pictures_msgs = stateData.get('good_pictures_msgs', {})
         if mid in good_pictures_msgs:
             for good_msg in good_pictures_msgs[mid][::-1]:
                 await tryDelete(good_msg)
         await tryDelete(c.message)
-        
-        if state:
-            await state.finish()
     
 
 # =============== FOUND CHEAPER ===============
@@ -117,7 +119,6 @@ async def _(c: CallbackQuery, state: FSMContext):
 async def _(m: Message, state: FSMContext):
     stateData = dotdict(await state.get_data())
     user = UserService.Get(m.from_user.id)
-    await state.finish()
     if m.text == Texts.QuitButton:
         await m.answer('👌🏻', reply_markup=Keyboards.startMenu(user))
         await m.delete()

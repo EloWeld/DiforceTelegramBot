@@ -25,7 +25,7 @@ import base64
 from services.textService import Texts
 from services.userService import UserService
 from utils import prepareGoodItemToSend, process_string
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 import nltk
 from nltk.tokenize import word_tokenize
@@ -95,7 +95,11 @@ async def attach_photo(goodID, good_pic_messages: List[Message]):
         
         def process_image(image):
             b_img = base64.b64decode(image)
-            img = Image.open(BytesIO(b_img))
+            try:
+                img = Image.open(BytesIO(b_img))
+            except UnidentifiedImageError:
+                loguru.logger.error('Failed to identify the image')
+                return None
             img_size = img.size
             if img_size[0] * img_size[1] > 160000:
                 return wrap_media(b_img) # Возвращаем обернутое изображение, если размеры соответствуют условию

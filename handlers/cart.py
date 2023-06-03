@@ -64,7 +64,7 @@ async def remove_from_cart_2(c: CallbackQuery, user, goodsID, good, cartItem):
 
     await c.answer(Texts.CartItemRemoved)
     text = prepareGoodItemToSend(good, user)
-    await c.message.edit_text(text, reply_markup=Keyboards.goodOptions(user, good))
+    await c.message.edit_text(text, reply_markup=Keyboards.goodOptions(user, good, c.data.split(":")[-1]))
 
 async def increment_cart_item_count(c, user, goodsID, good, cartItem):
     if good['QtyInStore'] < user.cart[goodsID]['Quantity'] + 1:
@@ -167,8 +167,6 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
     else:
         await sendCartItem(good, cartItem, user)
 
-    if state:
-        await state.finish()
 
 
 @dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|Cart:", state="*")
@@ -194,7 +192,6 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         stateData = await state.get_data()
         text = prepareCartItemToSend(MDB.Goods.find_one(dict(ProductID= stateData['cartItemID'])), [user['cart'][x] for x in user['cart'] if x == stateData['cartItemID']][0], user)
         await c.message.edit_text(text, reply_markup=stateData['saved_reply_markup'])
-        await state.finish()
     if action == "specify_cart_quantity":
         cartItemID = c.data.split(":")[2]
         await c.message.answer(Texts.SpecifyCartQuantity, reply_markup=Keyboards.CancelCartQuantity())

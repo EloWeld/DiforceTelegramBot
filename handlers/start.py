@@ -1,4 +1,5 @@
 import base64
+from PIL import UnidentifiedImageError
 import loguru
 from etc.filters import AntiSpam
 from etc.helpers import wrap_media
@@ -49,7 +50,12 @@ async def parseStartMessage(m: Message):
             media_group = MediaGroup()
             for i in range(10): # 10 - maximum images in telegram media group
                 b_img = base64.b64decode(images[i])
-                img_size = Image.open(BytesIO(b_img)).size
+                try:
+                    img = Image.open(BytesIO(b_img))
+                    img_size = img.size
+                except UnidentifiedImageError:
+                    loguru.logger.error('Failed to identify the image')
+                    img_size = 0
                 print('Image size:', img_size)
                 # Check that image not too small
                 if img_size[0]*img_size[1] > 160000:

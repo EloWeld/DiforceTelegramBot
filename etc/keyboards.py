@@ -13,7 +13,7 @@ class Keyboards:
     @staticmethod
     def backToCategory(cat):
         k = IKeyboard(resize_keyboard=True)
-        k.row(IButton(Texts.BackButton, callback_data=f"|Catalog:see_cat:{cat['GroupID']}"))
+        k.row(IButton(Texts.BackButton, callback_data=f"|Catalog:see_cat:{cat['GroupID'] if cat else None}"))
         return k
     
     @staticmethod
