@@ -128,3 +128,13 @@ def process_string(input_string):
     words = [word for word in words if word.strip()]
     
     return words
+
+
+def getCartPrice(user):
+    from services.goodsService import GoodsService
+    cart_price = 0
+    for cartItemID in user['cart']:
+        good = MDB.Goods.find_one(dict(ProductID=user['cart'][cartItemID]['ProductID']))
+        x = GoodsService.GetTargetPrice(user, good)
+        cart_price += x * user['cart'][cartItemID]['Quantity']
+    return cart_price

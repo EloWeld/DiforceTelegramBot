@@ -20,18 +20,29 @@ from services.oneService import OneService
 from services.orderService import OrderService
 from services.textService import Texts, verbose
 from services.userService import UserService
-from utils import cutText, format_phone_number, prepareCartItemToSend, prepareGoodItemToSend
+from utils import cutText, format_phone_number, getCartPrice, prepareCartItemToSend, prepareGoodItemToSend
 
 
-async def get_order_text(state: FSMContext, user):
-    stateData = await state.get_data()
-    p = stateData.get('pay_method', None)
-    d = stateData.get('deliv_method', None)
+async def get_order_text(state: FSMContext = None, user=None):
+    if user and state:
+        stateData = await state.get_data()
+        p = stateData.get('pay_method', None)
+        d = stateData.get('deliv_method', None)
 
-    address = next((x["Name"] for x in user["addresses"] if x["ID"]
-                   == stateData.get("deliv_address_id", None)), None)
-    address_text = f'Адрес доставки: <b>{address}</b>\n' if d == 'delivery' and address else ''
-    text = f"\n\nМетод оплаты: <b>{verbose[p]}</b>\nМетод доставки: <b>{verbose[d]}</b>\n{address_text}"
+        address = next((x["Name"] for x in user["addresses"] if x["ID"]
+                        == stateData.get("deliv_address_id", None)), None)
+        address_text = f'Адрес доставки: <b>{address}</b>\n' if d == 'delivery' and address else ''
+        cart_price = getCartPrice(user)
+        order_cost_text = f"{cart_price:,}₽".replace(',', ' ')
+        if d == 'delivery' and cart_price < 3000:
+            order_cost_text += " + 200₽ доставка".replace(',', ' ')
+
+        text = f"\n\nМетод оплаты: <b>{verbose[p]}</b>\n"\
+            f"Метод доставки: <b>{verbose[d]}</b>\n"\
+            f"{address_text}" \
+            f"Сумма к оплате: <b>{order_cost_text}</b>"
+    else:
+        text = ""
     return "✅ Все товары из корзины есть на складе в достаточном количестве. Укажите метод оплаты и доставки и подтвердите создание заказа" + text
 
 
@@ -166,11 +177,14 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             return
 
         if success_order_data:
+            cart_price = getCartPrice(user)
             saved_card = cart.copy()
             order_data = OrderService.CreateWithBot(success_order_data, user)
             order_data['DeliveryMethod'] = deliv_method
             order_data['PayMethod'] = pay_method
             order_data['DeliveryAddress'] = deliv_address_id
+            order_data['DeliveryPrice'] = 200 if cart_price < 3000 and order_data['DeliveryMethod'] == 'delivery' else 0
+            order_data['CartPrice'] = cart_price
 
             if order_data['DeliveryAddress']:
                 for addr in user['addresses']:
@@ -193,7 +207,6 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             await c.message.delete()
 
             try:
-                full_cart_summary = 0
                 order_text = f"📦 Номер заказа: <code>{success_order_data['CreatedOrderID']}</code>\n\n"
                 order_text += "📋 Состав заказа:\n"
 
@@ -201,12 +214,12 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
                     price = cartItem['Price']
                     quantity = cartItem['Quantity']
                     item_total = price * quantity
-                    full_cart_summary += item_total
 
                     order_text += f"<code>{quantity} шт</code> * <code>{price}₽</code> = <code>{item_total}₽</code> | <code>{product_id}</code> | <b>{cartItem['ProductName']}</b>\n\n"
-
-                formatted_summary = f"Общая стоимость корзины: <code>{full_cart_summary:,}₽</code>".replace(
-                    ',', ' ')
+                order_cost_text = f"{cart_price:,}₽".replace(',', ' ')
+                if order_data['DeliveryMethod'] == 'delivery' and cart_price < 3000:
+                    order_cost_text += f" + {order_data['DeliveryPrice']:,}₽ доставка".replace(',', ' ')
+                formatted_summary = f"Общая сумма: <code>{order_cost_text}</code>"
                 order_text += formatted_summary
                 order_text += f"\n\n🚩 Адрес доставки: <code>{order_data.get('DeliveryAddress', 'Не указан')}</code>\n"
                 order_text += f"🚩 Способ доставки: <code>{verbose[order_data['DeliveryMethod']]}</code>\n"
@@ -259,4 +272,4 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
                     await c.message.answer(f"⚠️ Товара <b>{cutText(cItem['ProductName'], 50)}</b> на складе осталось только <b>{cItem['good_item']['QtyInStore']}</b> шт., а у вас в корзине <b>{cItem['Quantity']}</b> шт., измените корзину")
 
         if can_order:
-            await c.message.edit_text("✅ Все товары из корзины есть на складе в достаточном количестве. Укажите метод оплаты и доставки и подтвердите создание заказа", reply_markup=Keyboards.ConfirmOrder())
+            await c.message.edit_text(await get_order_text(state, user), reply_markup=Keyboards.ConfirmOrder())

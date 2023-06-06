@@ -20,7 +20,7 @@ from services.oneService import OneService
 from services.orderService import OrderService
 from services.textService import Texts, verbose
 from services.userService import UserService
-from utils import cutText, format_phone_number, prepareCartItemToSend, prepareGoodItemToSend, tryDelete
+from utils import cutText, format_phone_number, getCartPrice, prepareCartItemToSend, prepareGoodItemToSend, tryDelete
 
 
 async def sendCartItem(good, cartItem, user):
@@ -84,10 +84,10 @@ async def send_cart_item(c, user, goodsID, good, cartItem):
     await c.answer()
     await sendCartItem(good, cartItem, user)
 
+
 async def showCart(user):
     """Show cart with all items."""
     cartItems = []
-    cart_price = 0
 
     if user['cart'] == {}:
         await bot.send_message(user.id, Texts.YourCartIsEmpty)
@@ -104,12 +104,11 @@ async def showCart(user):
             cartItems[-1]['SummaryPrice'] = x * cartItems[-1].Quantity
             cartItems[-1]['ProductName'] = cutText(
                 cartItems[-1]['ProductName'], 35)
-            cart_price += x * cartItems[-1].Quantity
 
     cartText = '\n'.join(Texts.CartItemTextFormat.format(**x)
                          for x in cartItems)
 
-    cartPriceString = f"{cart_price:,}".replace(',', ' ')
+    cartPriceString = f"{getCartPrice(user):,}".replace(',', ' ')
 
     await bot.send_message(user.id, Texts.YourCartMessage.format(cart_text=cartText,
                                                                  cart_price=cartPriceString), reply_markup=Keyboards.yourCart(cartItems))
