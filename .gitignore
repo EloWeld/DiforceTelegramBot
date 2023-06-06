@@ -5,6 +5,7 @@ __pycache__/
 firebase_creds.json
 # C extensions
 *.so
+*.log
 
 # Distribution / packaging
 .Python

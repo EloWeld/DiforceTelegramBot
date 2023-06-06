@@ -3,6 +3,7 @@ from typing import List
 import loguru
 import requests
 import urllib.parse
+from loggerConf import logger
 from etc.helpers import rdotdict
 
 from loader import MDB, REQUESTS_TIMEOUT, Consts
@@ -106,7 +107,7 @@ class OneServiceBase:
             data = list({x['ProductID']: x for x in data}.values())
             
         except Exception as e:
-            print(f"Error get catalog: {e}")
+            logger.error(f"Error get catalog: {e}")
             # Обработка ошибки таймаута
             data = [rdotdict(x) for x in MDB.Goods.find()]
         return data
@@ -126,7 +127,7 @@ class OneServiceBase:
 
             good = adaptGood(result[0], result)
         except requests.exceptions.Timeout:
-            print("Превышено время ожидания")
+            logger.error("Time expired")
             # Обработка ошибки таймаута
             good = MDB.Goods.find_one(dict(ProductID=good_id))
             good = rdotdict(good) if good else None
@@ -142,7 +143,7 @@ class OneServiceBase:
                     f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
             return r.json()
         except requests.exceptions.Timeout:
-            print("Превышено время ожидания")
+            logger.error("Time expired")
             # Обработка ошибки таймаута
             return list(MDB.Settings.find_one(dict(id="Catalog"))['catalog'].values())
 
@@ -225,8 +226,8 @@ class OneServiceBase:
         if 'inn+kpp' in data and len(data['inn+kpp'].split('+')) > 1:
             params['KPP'] = data['inn+kpp'].split('+')[1]
 
-        print("-" * 20)
-        print(data, params)
+        logger.info("-" * 20)
+        logger.info(f"{data}{params}")
         params = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
         
         r = self.session.get(self.base_endpoint+"getUsersByParams", params=params,

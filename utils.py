@@ -51,7 +51,6 @@ def prepareGoodItemToSend(good, user):
     good['ProductName'] = good['ProductName'].replace('<', '‹').replace('>', '›')
     good['ProductDescription'] = cutText(good['ProductDescription'], 3500)
     messageText = Texts.GoodCard.format(**good)
-    print(messageText)
     return messageText
     
     

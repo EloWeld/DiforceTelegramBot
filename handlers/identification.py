@@ -82,7 +82,8 @@ async def process_inn(message: types.Message, state: FSMContext):
             
         await message.answer(t)
         if len(sameUsers) <= 3 and len(sameUsers) > 0:
-            print(sameUsers)
+            from loggerConf import logger
+            logger.info("Same Users: "+str(sameUsers))
             user = UserService.Get(message)
             user['is_authenticated'] = True
             user['identification_data'] = dict(data)

@@ -47,7 +47,6 @@ async def get_price_list(m: Message, command: Command.CommandObj, state: FSMCont
     loguru.logger.info(f"Sending price opt list to user: {user.id}|@{user.username}")
     response = requests.get("https://diforce.ru/price.xlsx")
     if response.status_code == 200:
-        print(response.content)
         with open("pricesOpt.xlsx", 'wb') as o:
             o.write(response.content)
 

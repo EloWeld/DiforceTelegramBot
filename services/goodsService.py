@@ -6,7 +6,7 @@ from loader import MDB
 from services.oneService import OneService
 from dotdict import dotdict
 from func_timeout import func_timeout, FunctionTimedOut
-
+from loggerConf import logger
 
 class GoodsService:
     @staticmethod
@@ -23,7 +23,7 @@ class GoodsService:
             else:
                 return good['Price']
         except Exception as e:
-            print(e, good, user)
+            logger.error(f"{e}, {good}, {user}")
 
     @staticmethod
     def GetCategoriesTree() -> rdotdict:
@@ -65,7 +65,8 @@ class GoodsService:
         try:
             good = func_timeout(2, OneService.getGood, args=(good_id, True))
         except FunctionTimedOut:
-            print('Время ожидания истекло')
+            logger.error('Time expired')
+            
             good = MDB.Goods.find_one(dict(ProductID=good_id))
             
         try:
@@ -78,7 +79,7 @@ class GoodsService:
                 images = func_timeout(
                     5, OneService.getGoodImages, args=(good_id,))
             except FunctionTimedOut:
-                print('Время ожидания истекло')
+                logger.error('Time expired')
                 images = []
             return dotdict(good), images
         return dotdict(good)
@@ -104,7 +105,6 @@ class GoodsService:
         for item in catalog:
             distance = GoodsService.LevenshteinDistance(
                 item['ProductName'].lower(), keyword.lower())
-            print(distance)
             if distance <= threshold:
                 item['l_distance'] = distance
                 matching_items.append(item)
@@ -231,5 +231,6 @@ class GoodsService:
             if good['ColorName'].lower() in colors:
                 good['ColorEmoji'] = colors[good['ColorName'].lower()]
         except Exception as e:
-            print(e)
+            logger.error(e)
+            
         return good['ColorEmoji']

@@ -17071,5 +17071,6 @@ a = [
 }
 ]
 s = set([x['ContractType'] for x in a])
-print(s)
+from loggerConf import logger
+logger.info(s)
 #auth.generate_email_verification_link('coddeboy@gmail.com', action_code_settings, default_app)

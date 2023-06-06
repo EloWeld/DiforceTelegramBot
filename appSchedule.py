@@ -7,32 +7,32 @@ import loguru
 from loader import MDB, bot
 from dotdict import dotdict
 import schedule
-
+from loggerConf import logger
 from services.oneService import OneService
 from utils import format_phone_number, is_in_group_hierarchy
 
 FORBIDDEN_GROUP_IDS = [
-    "ЦБ000000011",
-    "ЦБ000000017",
-    "ЦБ000000018",
-    "ЦБ000000091"
-    "DI000001303",
-    "DI000002842",
-    "DI000003552",
-    "DI000004090",
-    "00000000001",
-    "DI000004809",
-    "DI000007050",
+    "00000000001", # 1Прочее
+    "ЦБ000000011", # ОЖИДАЮТСЯ НОВИНКИ
+    "ЦБ000000017", # БОЛЬШЕ НЕ БУДЕТ ПОСТУПЛЕНИЯ (АРХИВ)
+    "ЦБ000000018", # Сертификаты
+    "ЦБ000000091" # Товары под заказ
+    "DI000001303", # Выстовочные стенды
+    "DI000002842", # Услуги
+    "DI000003552", # Для печати фотографий
+    "DI000004090", # УЦЕНКА
+    "DI000004809", # ТОВАР НА МИРА 60
+    "DI000007050", # Всё для зарядки
 ]
 
 ALLOWED_USER_GROUPS = [
-    "DI0000764",
-    "ЦБ0000028",
-    "ЦБ0000540",
-    "ИН0000002",
-    "ИН0000035",
-    "000000018",
-    "DI0000527",
+    "DI0000764", # КРУПНЫЙ ОПТ
+    "ЦБ0000028", # ПОКУПАТЕЛИ ОПТОВЫЕ
+    "ЦБ0000540", # РОЗНИЧНЫЕ ПОКУПКИ
+    "ИН0000002", # СОТРУДНИКИ
+    "ИН0000035", # ООО НКО Яндекс Директ
+    "000000018", # Частное лицо (возврат)
+    "DI0000527", # СПЕЦ ЦЕНА ОПТ
 ]
 
 
@@ -97,7 +97,7 @@ async def diforceUsersSync():
                 g = [x for x in user_groups if x['GroupID'] == x_user['GroupID']]
                 excluded_user_groups.add(g[0]['GroupName'] if g else '???')
                 
-        print(excluded_user_groups)
+        log.info(excluded_user_groups)
         MDB.DiforceUsers.delete_many({})
         for f_user in filtered_users:
             MDB.DiforceUsers.insert_one(f_user)
