@@ -13,7 +13,7 @@ from aiogram.types import Message, ChatType, BotCommand
 from services.goodsService import GoodsService
 from services.textService import Texts
 
-from aiogram.types import Message, ChatType, BotCommand, CallbackQuery, ContentType, MediaGroup, InputFile
+from aiogram.types import Message, ChatType, BotCommand, CallbackQuery, ContentType, MediaGroup, InputFile, ReplyKeyboardRemove
 from services.userService import UserService
 from utils import prepareGoodItemToSend, prepareUserToPrint
 
@@ -74,8 +74,13 @@ async def parseStartMessage(m: Message):
             keyboard = Keyboards.goodOptions(user, good)
             await m.answer(messageText, reply_markup=keyboard)
 
+
 @dp.message_handler(CommandStart(), AntiSpam(), state="*")
 async def _(m: Message, command: Command.CommandObj, state: FSMContext):
+    if m.chat.type != ChatType.PRIVATE:
+        await m.answer("⚠️ В чатах бот не работает", reply_markup=ReplyKeyboardRemove())
+        return
+    
     if state:
         await state.finish()
         
