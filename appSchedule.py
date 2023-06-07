@@ -97,7 +97,7 @@ async def diforceUsersSync():
                 g = [x for x in user_groups if x['GroupID'] == x_user['GroupID']]
                 excluded_user_groups.add(g[0]['GroupName'] if g else '???')
                 
-        log.info(excluded_user_groups)
+        logger.info(excluded_user_groups)
         MDB.DiforceUsers.delete_many({})
         for f_user in filtered_users:
             MDB.DiforceUsers.insert_one(f_user)
@@ -105,6 +105,21 @@ async def diforceUsersSync():
         loguru.logger.error(
             f"[DIFORCE-USERS]: Can't sync diforce users!: {e}; traceback: {traceback.format_exc()}")
     loguru.logger.info(f"[CATALOG]: Users synced")
+
+async def clearLogs():
+    with open('botlog_debug.log','w') as f:
+        f.write('')
+    with open('botlog_info.log','w') as f:
+        f.write('')
+    with open('botlog_warning.log','w') as f:
+        f.write('')
+    with open('botlog_error.log','w') as f:
+        f.write('')
+    with open('ServiceErrors.log','w') as f:
+        f.write('')
+    with open('ServiceOutput.log','w') as f:
+        f.write('')
+    print("Logs clerared")
 
 def diforceUsersSyncWrapper():
     while True:
@@ -115,13 +130,14 @@ def diforceUsersSyncWrapper():
 th1 = Thread(target=diforceUsersSyncWrapper,
              name="Sync users from diforce thread")
 th1.start()
-schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogTreeSync()))
-schedule.every(2).minutes.at(":37").do(lambda: asyncio.run(catalogGoodsSync()))
-schedule.every(50).minutes.at(":37").do(
+schedule.every(2).minutes.at(":00").do(lambda: asyncio.run(catalogTreeSync()))
+schedule.every(3).minutes.at(":00").do(lambda: asyncio.run(catalogGoodsSync()))
+schedule.every(12).hours.at(":00").do(lambda: asyncio.run(clearLogs()))
+schedule.every(50).minutes.at(":00").do(
     lambda: asyncio.run(goodRequestsCleaner()))
 
 loguru.logger.info("Starting scheduler")
-
+asyncio.run(clearLogs())
 asyncio.run(goodRequestsCleaner())
 asyncio.run(catalogTreeSync())
 asyncio.run(catalogGoodsSync())

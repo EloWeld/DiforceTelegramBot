@@ -7,10 +7,10 @@ logger.setLevel(logging.DEBUG)
 
 
 # Создаем обработчики файла для каждого уровня логирования
-debug_handler = logging.FileHandler('botlog_debug.log')
-info_handler = logging.FileHandler('botlog_info.log')
-warning_handler = logging.FileHandler('botlog_warning.log')
-error_handler = logging.FileHandler('botlog_error.log')
+debug_handler = logging.FileHandler('botlog_debug.log', encoding='utf-8')
+info_handler = logging.FileHandler('botlog_info.log', encoding='utf-8')
+warning_handler = logging.FileHandler('botlog_warning.log', encoding='utf-8')
+error_handler = logging.FileHandler('botlog_error.log', encoding='utf-8')
 
 # Устанавливаем уровень логирования для каждого обработчика
 debug_handler.setLevel(logging.DEBUG)
