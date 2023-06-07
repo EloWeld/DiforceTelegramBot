@@ -25,7 +25,7 @@ admin_commands = dict(
     catalogToExcel="Генерирует xlsx всех товаров из базы",
 )
 
-@dp.message_handler(Command("updateTexts"), AntiSpam(), state="*", chat_types=ChatType.PRIVATE)
+@dp.message_handler(Command("updateTexts"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def _(m: Message, command: Command.CommandObj, state: FSMContext):
     if state:
         await state.finish()
@@ -38,7 +38,7 @@ async def _(m: Message, command: Command.CommandObj, state: FSMContext):
 
         loguru.logger.success(f"✅ Done")
 
-@dp.message_handler(Command("priceList"), AntiSpam(), state="*", chat_types=ChatType.PRIVATE)
+@dp.message_handler(Command("priceList"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def get_price_list(m: Message, command: Command.CommandObj, state: FSMContext):
     if state:
         await state.finish()
@@ -56,7 +56,7 @@ async def get_price_list(m: Message, command: Command.CommandObj, state: FSMCont
     
         
 
-@dp.message_handler(Command("catalogToExcel"), AntiSpam(), state="*", chat_types=ChatType.PRIVATE)
+@dp.message_handler(Command("catalogToExcel"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def get_price_list(m: Message, command: Command.CommandObj, state: FSMContext):
     if state:
         await state.finish()
@@ -80,7 +80,7 @@ async def get_price_list(m: Message, command: Command.CommandObj, state: FSMCont
         
         loguru.logger.success(f"✅ Price list xlsx file sent")
 
-@dp.message_handler(Command("help"), AntiSpam(), state="*", chat_types=ChatType.PRIVATE)
+@dp.message_handler(Command("help"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def help_admin(m: Message, command: Command.CommandObj, state: FSMContext):
     if state:
         await state.finish()
