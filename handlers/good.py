@@ -127,10 +127,6 @@ async def _(m: Message, state: FSMContext):
     good = GoodsService.GetGoodByID(stateData.goodID)
     comment = m.text if m.text else m.caption if m.caption else '➖'
     # Define admin type for send message
-    if user.opt in ['SmallOpt', 'MiddleOpt', 'LargeOpt']:
-        contact = Consts.OptContactTGID
-    else:
-        contact = Consts.RetailContactTGID
 
     # Build text
     messageText = Texts.FoundCheaperAdminMessage.format(
@@ -138,7 +134,7 @@ async def _(m: Message, state: FSMContext):
 
     # If has attached photo - send photo
     if len(m.photo) > 0:
-        await bot.send_photo(contact, caption=messageText, photo=m.photo[0].file_id)
+        await bot.send_photo(Consts.OrderManagerID, caption=messageText, photo=m.photo[0].file_id)
     else:
-        await bot.send_message(contact, text=messageText)
+        await bot.send_message(Consts.OrderManagerID, text=messageText)
     await m.answer(Texts.YourRequestWasSentMessage, reply_markup=Keyboards.startMenu(user))
