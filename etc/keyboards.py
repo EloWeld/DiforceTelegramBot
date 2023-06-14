@@ -12,8 +12,10 @@ from services.textService import Texts
 class Keyboards:
     @staticmethod
     def backToCategory(cat):
+        if not cat:
+            return None
         k = IKeyboard(resize_keyboard=True)
-        k.row(IButton(Texts.BackButton, callback_data=f"|Catalog:see_cat:{cat['GroupID'] if cat else None}"))
+        k.row(IButton(Texts.BackButton, callback_data=f"|Catalog:see_cat:{cat['GroupID']}"))
         return k
     
     @staticmethod
@@ -213,7 +215,8 @@ class Keyboards:
             k.insert(IButton(('☑️' if x not in selected_brands else '✅ ') + x, callback_data=f"|Catalog:brand_filter_choose:{x}"))
         if req and 'BrandFilter' in req['AppliedFilters']:
             k.row(IButton(Texts.CancelFilter, callback_data=f"|Catalog:cancel_filter:brand"))
-        k.row(IButton(Texts.Show, callback_data=f"|Catalog:brand_filter_show"))
+        if selected_brands != []:
+            k.row(IButton(Texts.Show, callback_data=f"|Catalog:brand_filter_show"))
         k.row(IButton(Texts.Cancel, callback_data=f"|Catalog:cancel_filter:brand"))
         return k
         

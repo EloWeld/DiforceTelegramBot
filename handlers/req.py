@@ -56,19 +56,19 @@ def search_objects(objects_list, search_query):
     return [x[0] for x in r]
 
 
-def apply_req(req: dict, user):
+def apply_req(req: dict, user, exclude_filter=None):
     goods = list(MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']}, QtyInStore={"$gt": 0})))
-    if 'PriceFilter' in req['AppliedFilters']:
+    if 'PriceFilter' in req['AppliedFilters'] and exclude_filter != 'PriceFilter':
         pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
         min_price = req['AppliedFilters']['PriceFilter']['min_price']
         max_price = req['AppliedFilters']['PriceFilter']['max_price']
         goods = [x for x in goods if min_price  <= x[pr] <= max_price]
         
-    if 'BrandFilter' in req['AppliedFilters']:
+    if 'BrandFilter' in req['AppliedFilters'] and exclude_filter != 'BrandFilter':
         brands = req['AppliedFilters']['BrandFilter']['Brands']
         goods = [x for x in goods if x['Manufacturer'] in brands]
-        
-    if 'QuerySearch' in req['AppliedFilters']:
+
+    if 'QuerySearch' in req['AppliedFilters'] and exclude_filter != 'QuerySearch':
         search_query = req['AppliedFilters']['QuerySearch']
         goods = search_objects(goods, search_query)
     return goods
@@ -240,13 +240,15 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             
             if req_id is not None:
                 req: Any = MDB.GoodsRequests.find_one(dict(ID=req_id))
-                goods = apply_req(req, user)
+                selected_brands = []
+                if 'BrandFilter' in req['AppliedFilters']:
+                    selected_brands = req['AppliedFilters']['BrandFilter']['Brands']
+                all_brands = sorted(set(x['Manufacturer'] for x in apply_req(req, user, 'BrandFilter')))
             else:
                 goods = list(MDB.Goods.find(dict(GroupID=category_group_id)))
                 req = None
-                
-            selected_brands = stateData.get("selected_brands", [])
-            all_brands = set(x['Manufacturer'] for x in goods)
+                all_brands = sorted(set(x['Manufacturer'] for x in goods))
+                selected_brands = stateData.get("selected_brands", [])
 
             await c.message.answer(Texts.BrandFilterMessage, reply_markup=Keyboards.BrandFilter(all_brands, selected_brands, req))  
             await state.update_data(selected_brands=selected_brands, all_brands=all_brands, category_group_id=category_group_id)
@@ -256,7 +258,10 @@ async def _(c: CallbackQuery, state: FSMContext=None):
     elif action == "brand_filter_choose":
         choosen_brand = action_params[0]
         selected_brands = stateData.get("selected_brands", [])
-        all_brands = stateData.get("all_brands", [])
+        if stateData.get("all_brands", []) != []:
+            all_brands = sorted(stateData.get("all_brands", []))
+        else: 
+            all_brands = []
         req: Any = MDB.GoodsRequests.find_one(dict(ID=stateData.get('req_id', None)))
 
         if choosen_brand in selected_brands:
@@ -264,7 +269,8 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         else:
             selected_brands.append(choosen_brand)
 
-        await c.message.edit_text(Texts.BrandFilterMessage, reply_markup=Keyboards.BrandFilter(all_brands, selected_brands, req))  
+        await c.message.edit_text(Texts.BrandFilterMessage, 
+                                  reply_markup=Keyboards.BrandFilter(all_brands, selected_brands, req))  
         await state.update_data(selected_brands=selected_brands)
         await c.answer()
 
@@ -308,7 +314,9 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             await c.message.answer(Texts.TooManyGoodsException)
 
     elif action == "cancel_filter":
-        await state.finish()
+        req: Any = MDB.GoodsRequests.find_one(dict(ID=stateData.get('req_id', None)))
+        if req:
+            MDB.GoodsRequests.update_one(dict(ID=req['ID']), {"$set": {"AppliedFilters": {}}})
         await c.answer()
         await c.message.delete()
 

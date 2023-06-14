@@ -160,6 +160,7 @@ async def set_cart_product_quantity(m: Message, state: FSMContext):
         if 'msg_from_good_msg' in stateData:
             text = prepareCartItemToSend(good, cartItem, user)
             await stateData['msg_from_good_msg'].edit_text(text, reply_markup=stateData['msg_from_good_msg'].reply_markup)
+            await state.set_state(stateData['last_state'])
         await asyncio.sleep(3)
         await tryDelete(m)
         await tryDelete(ans)
@@ -198,7 +199,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         await state.update_data(cartItemID=cartItemID, from_adding=False)
     if action == "specify_cart_quantity_2":
         cartItemID = c.data.split(":")[2]
-        await state.update_data(saved_reply_markup=c.message.reply_markup)
+        await state.update_data(saved_reply_markup=c.message.reply_markup, last_state=await state.get_state())
         await c.message.edit_text(Texts.SpecifyCartQuantity, reply_markup=Keyboards.CancelCartQuantity2())
         await state.set_state("cart_product_quantity")
         await state.update_data(cartItemID=cartItemID, from_adding=True, msg_from_good_msg=c.message)

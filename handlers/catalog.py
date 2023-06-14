@@ -151,7 +151,7 @@ async def _(m: Message, state: FSMContext):
         goods = apply_req(req, user)
 
     if goods == []:
-        await m.answer(Texts.NoGoodsForFilter, reply_markup=Keyboards.backToCategory(cat))
+        await m.answer(Texts.NoGoodsForFilter, reply_markup=Keyboards.backToCategory(cat) )
         return
     
     try:
