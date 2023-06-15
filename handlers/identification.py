@@ -28,7 +28,7 @@ async def process_phone_email(message: types.Message, state: FSMContext):
         if "@" in message.text:
             data['email'] = message.text
         else:
-            data['phone'] = format_phone_number(message.text)
+            data['phone'] = format_phone_number(message.text.strip())
 
         # отправляем следующий вопрос
         await message.answer("Введите полное наименование организации/физ лица:")
@@ -64,7 +64,7 @@ async def process_inn(message: types.Message, state: FSMContext):
             #     cond = cond and data['inn+kpp'].split('+')[0] == d_user['INN']
             if 'full_name' in data and 'FullName' in d_user:
                 prob = fuzz.partial_ratio(format_fio(data['full_name']), format_fio(d_user['FullName']))
-                cond = cond and  prob > 90
+                cond = cond and  prob > 80
             if 'phone' in data and 'Phone' in d_user:
                 cond = cond and data['phone'] == d_user['Phone']
             if 'email' in data and 'Email' in d_user:
