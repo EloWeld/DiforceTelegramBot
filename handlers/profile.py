@@ -12,7 +12,7 @@ from services.orderService import OrderService
 from services.textService import Texts
 from services.userService import UserService
 from loader import dp
-from utils import cutText, format_fio
+from utils import cutText, format_fio, split_message_by_html_tags
     
 def get_personal_cabinet_text(user):
     text = f"Личный кабинет пользователя {user.fullname}\n"
@@ -44,9 +44,15 @@ async def order_info(call: CallbackQuery):
     order_items_text
 }
 """f"" 
+  # Разделение сообщения на части с учетом HTML-разметки
+    message_parts = split_message_by_html_tags(order_text, max_length=4096)
+
 
     # Отправка сообщения с информацией о заказе и кнопками "Назад" и "Повторить заказ"
-    await call.message.edit_text(order_text, reply_markup=Keyboards.OrderInfo(order))
+    for part in message_parts[:-1]:
+        await call.message.answer(part)
+    await call.message.answer(message_parts[-1], reply_markup=Keyboards.OrderInfo(order))
+    await call.message.delete()
     
 @dp.callback_query_handler(lambda c: c.data.startswith("repeat_order:"), state="*")
 async def repeat_order(c: CallbackQuery, state: FSMContext):

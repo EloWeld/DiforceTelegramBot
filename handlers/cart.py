@@ -20,7 +20,7 @@ from services.oneService import OneService
 from services.orderService import OrderService
 from services.textService import Texts, verbose
 from services.userService import UserService
-from utils import cutText, format_phone_number, getCartPrice, prepareCartItemToSend, prepareGoodItemToSend, tryDelete
+from utils import cutText, format_phone_number, format_plural, getCartPrice, prepareCartItemToSend, prepareGoodItemToSend, tryDelete
 
 
 async def sendCartItem(good, cartItem, user):
@@ -85,14 +85,15 @@ async def send_cart_item(c, user, goodsID, good, cartItem):
     await sendCartItem(good, cartItem, user)
 
 
-async def showCart(user):
+async def showCart(user, start: int=0):
     """Show cart with all items."""
     cartItems = []
 
     if user['cart'] == {}:
         await bot.send_message(user.id, Texts.YourCartIsEmpty)
         return
-    for cartItemID in user['cart']:
+    
+    for cartItemID in user['cart'][start:start+30]:
         cartItems += [dotdict(user['cart'][cartItemID])]
         good = MDB.Goods.find_one(dict(ProductID=cartItems[-1].ProductID))
         x = GoodsService.GetTargetPrice(user, good)
@@ -107,11 +108,14 @@ async def showCart(user):
 
     cartText = '\n'.join(Texts.CartItemTextFormat.format(**x)
                          for x in cartItems)
+    
+    if len(user['cart']) - 30 > 0:
+        cartText += f"\n И ещё {format_plural(len(user['cart']) - 30, 'товар', 'товара', 'товаров')}"
 
     cartPriceString = f"{getCartPrice(user):,}".replace(',', ' ')
 
     await bot.send_message(user.id, Texts.YourCartMessage.format(cart_text=cartText,
-                                                                 cart_price=cartPriceString), reply_markup=Keyboards.yourCart(cartItems))
+                                                                 cart_price=cartPriceString), reply_markup=Keyboards.yourCart(cartItems, start))
 
 
 
@@ -177,6 +181,18 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
     if action == "hide":
         await c.message.delete()
+
+    if action == "main":
+        start = 0
+        if len(c.data.split(":")) == 2:
+            start = int(c.data.split(":")[2])
+        if start < 0:
+            await c.answer("Вы в начале")
+            return
+        elif start > len(user['cart']):
+            await c.answer("Вы в конце")
+            return
+        await showCart(user, start=start)
     if action == "clear_all":
         user['cart'] = {}
         UserService.Update(user)

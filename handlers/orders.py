@@ -20,7 +20,7 @@ from services.oneService import OneService
 from services.orderService import OrderService
 from services.textService import Texts, verbose
 from services.userService import UserService
-from utils import cutText, format_phone_number, getCartPrice, prepareCartItemToSend, prepareGoodItemToSend
+from utils import cutText, format_phone_number, getCartPrice, prepareCartItemToSend, prepareGoodItemToSend, split_message_by_html_tags
 
 
 async def get_order_text(state: FSMContext = None, user=None):
@@ -231,10 +231,15 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
                 order_manager_message = f"⭐ Пользователь <a href='tg://user?id={user.id}'>{user.fullname}</a> (@{user.username}) Сделал заказ!\n\n" + \
                     user_info_text + order_text
-                await bot.send_message(Consts.OrderManagerID, order_manager_message, reply_markup=types.ReplyKeyboardRemove())
+                    
+                message_parts = split_message_by_html_tags(order_manager_message, max_length=4096)
+                # Отправка частей сообщения
+                for part in message_parts:
+                    await bot.send_message(Consts.OrderManagerID, part, parse_mode='HTML', reply_markup=types.ReplyKeyboardRemove())
             except Exception as e:
                 loguru.logger.error(
                     f"Can't send message to user about order: {e}, {traceback.format_exc()}")
+                await bot.send_message(Consts.OrderManagerID, f"Не удалось отправить сообщение о заказе #{success_order_data['CreatedOrderID']} покупателя <a href='tg://user?id={user.id}'>{user['diforce_data']['FullName']}</a>")
         else:
             await c.message.answer("❌ Не удалось создать заказ в 1С!")
 

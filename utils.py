@@ -3,7 +3,30 @@ import loguru
 from loader import MDB, bot
 from services.textService import Texts
 from services.userService import UserService
+import re
 
+def split_message_by_html_tags(message, max_length):
+    pattern = r'(<[^>]+>)'
+    parts = re.split(pattern, message)
+    result_parts = []
+    current_part = ''
+    for part in parts:
+        if len(current_part) + len(part) <= max_length:
+            current_part += part
+        else:
+            result_parts.append(current_part)
+            current_part = part
+    if current_part:
+        result_parts.append(current_part)
+    return result_parts
+
+def format_plural(number, form1, form2, form3):
+    if number % 10 == 1 and number % 100 != 11:
+        return f"{number} {form1}"
+    elif number % 10 in (2, 3, 4) and number % 100 not in (12, 13, 14):
+        return f"{number} {form2}"
+    else:
+        return f"{number} {form3}"
 
 async def notifyAdmins(text: str):
     for admin in UserService.Admins():
