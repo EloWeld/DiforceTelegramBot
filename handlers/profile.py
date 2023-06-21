@@ -112,7 +112,16 @@ async def order_info(c: CallbackQuery):
         if not d_orders:
             await c.answer(Texts.YourOrdersHistoryIsEmpty, show_alert=True)
             return
-        await c.message.edit_text(Texts.YourOrderHistory, reply_markup=Keyboards.OrderHistory(d_orders, user.diforce_data.ID))
+        start = 0
+        if len(c.data.split(':')) > 2:
+            start = int(c.data.split(':')[2]) 
+        if start < 0:
+            await c.answer("Вы в начале")
+            return
+        if start > len(d_orders):
+            await c.answer("Вы в конце")
+            return
+        await c.message.edit_text(Texts.YourOrderHistory, reply_markup=Keyboards.OrderHistory(d_orders, user.diforce_data.ID, start=start))
         
     elif options[1] == "logout_popup":
         await c.message.answer(Texts.LogoutPopupText, reply_markup=Keyboards.Popup("profile:logout"))        

@@ -53,12 +53,16 @@ class Keyboards:
         return k
 
     @staticmethod
-    def OrderHistory(orders, diforce_user_id):
-        kb = IKeyboard()
+    def OrderHistory(orders, diforce_user_id, start=0):
+        kb = IKeyboard(row_width=2)
         # Замените эту строку на реальные заказы пользователя из базы данных
-        for order in orders:
-            kb.add(IButton(f"Заказ №{order.id}", callback_data=f"see_order:{order.id}:{diforce_user_id}"))
-        kb.add(IButton("Назад", callback_data="profile"))
+        for order in orders[start:start+20]:
+            kb.insert(IButton(f"Заказ №{order.id}", callback_data=f"see_order:{order.id}:{diforce_user_id}"))
+        if len(orders) > 20:
+            kb.row()
+            kb.insert(IButton("◀️ Предыдущие", callback_data=f"profile:orders_history:{start - 20}"))
+            kb.insert(IButton("▶️ Следующие", callback_data=f"profile:orders_history:{start + 20}"))
+        kb.row(IButton("Назад", callback_data="profile"))
         return kb
 
     @staticmethod
