@@ -50,7 +50,7 @@ class OrderService:
     @classmethod
     def Update(cls, order):
         MDB.Orders.update_one(dict(id=order['id']), {"$set": dict(order)})
-        logger.success(f"[ ORDER ]: Order #{order['id']} is updated")
+        logger.debug(f"[ ORDER ]: Order #{order['id']} is updated")
 
     @classmethod
     def GetOrdersByUser(cls, user):

@@ -62,7 +62,7 @@ async def catalogTreeSync():
         MDB.Settings.insert_one(dict(id="Catalog"))
     MDB.Settings.update_one(dict(id="Catalog"), {
                             "$set": dict(catalog=catalog)})
-    logger.success(
+    logger.debug(
         f"[CATALOG]: Catalogs tree has been updated successfully within {time.time() - startTime} seconds")
 
 
@@ -74,7 +74,7 @@ async def catalogGoodsSync():
     logger.info(f"[CATALOG]: All goods was deleted")
     for x in data:
         MDB.Goods.insert_one(x)
-    logger.success(
+    logger.debug(
         f"[CATALOG]: Catalogs has been updated successfully within {time.time() - startTime} seconds")
 
 

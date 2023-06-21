@@ -37,7 +37,7 @@ async def _(m: Message, command: Command.CommandObj, state: FSMContext):
         MDB.Settings.update_one(dict(id="Texts"), {"$set": Texts.ALL})
         await m.answer("Готово")
 
-        logger.success(f"✅ Done")
+        logger.debug(f"✅ Done")
 
 @dp.message_handler(Command("priceList"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def get_price_list(m: Message, command: Command.CommandObj, state: FSMContext):
@@ -79,7 +79,7 @@ async def get_price_list(m: Message, command: Command.CommandObj, state: FSMCont
         # Удаление файла после отправки
         os.remove(file_name)
         
-        logger.success(f"✅ Price list xlsx file sent")
+        logger.debug(f"✅ Price list xlsx file sent")
 
 @dp.message_handler(Command("help"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def help_admin(m: Message, command: Command.CommandObj, state: FSMContext):

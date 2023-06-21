@@ -180,13 +180,13 @@ class TextsMetaClass(type):
             doc = MDB.Settings.insert_one(dict(id="Texts"))
 
         if key in doc:
-            logger.success(f"[TEXTS]: Saved text for key: {key}")
+            logger.debug(f"[TEXTS]: Saved text for key: {key}")
             return doc[key]
         elif key in cls.__defaultTexts:
             t_value = cls.__defaultTexts[key]
             MDB.Settings.update_one(
                 dict(id="Texts"), {"$set": {key: t_value}})
-            logger.success(f"[TEXTS]: Saved text for key: {key}")
+            logger.debug(f"[TEXTS]: Saved text for key: {key}")
             return t_value
         elif key == "ALL":
             return cls.__defaultTexts

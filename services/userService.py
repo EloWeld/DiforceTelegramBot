@@ -30,7 +30,7 @@ class UserService:
             created_at=datetime.datetime.now()
         )
         MDB.Users.insert_one(u)
-        logger.success(
+        logger.debug(
             f"[ USER ]: Added new user, ID: {u.id}; Username: @{u.username}")
 
         return rdotdict(u)
@@ -45,7 +45,7 @@ class UserService:
     @classmethod
     def Update(cls, user: dict):
         MDB.Users.update_one(dict(id=user['id']), {"$set": dict(user)})
-        logger.success(f"[ USER ]: User #{user['id']} is updated")
+        logger.debug(f"[ USER ]: User #{user['id']} is updated")
 
     @classmethod
     def UpdateFromTgUser(cls, user: types.User):
