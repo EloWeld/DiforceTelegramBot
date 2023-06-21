@@ -93,8 +93,8 @@ async def showCart(user, start: int=0):
         await bot.send_message(user.id, Texts.YourCartIsEmpty)
         return
     
-    for cartItemID in user['cart'][start:start+30]:
-        cartItems += [dotdict(user['cart'][cartItemID])]
+    for cartItemID, cartItem in list(user['cart'].items())[start:start+30]:
+        cartItems.append(dotdict(cartItem))
         good = MDB.Goods.find_one(dict(ProductID=cartItems[-1].ProductID))
         x = GoodsService.GetTargetPrice(user, good)
         if not x:
