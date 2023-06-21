@@ -9,7 +9,7 @@ from loader import MDB, Consts, dp, bot
 from etc.keyboards import Keyboards
 from services.textService import Texts
 from aiogram.dispatcher.filters.state import State, StatesGroup
-
+from loggerConf import logger
 from services.userService import UserService
 from utils import split_long_text
 
@@ -128,7 +128,7 @@ async def process_mailing_confirm(call: types.CallbackQuery, state: FSMContext):
                 else:
                     await bot.send_message(chat_id=user.id, text=caption, reply_markup=inline_keyboard)
             except Exception as e:
-                loguru.logger.error(f"Error sending message to user {user.chat_id}: {e}")
+                logger.error(f"Error sending message to user {user.chat_id}: {e}")
 
         await state.finish()
         await call.message.answer(Texts.BroadcastDone)

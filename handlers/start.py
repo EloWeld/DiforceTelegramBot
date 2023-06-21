@@ -1,6 +1,7 @@
 import base64
 from PIL import UnidentifiedImageError
 import loguru
+from loggerConf import logger
 from etc.filters import AntiSpam
 from etc.helpers import wrap_media
 from etc.keyboards import Keyboards
@@ -37,7 +38,7 @@ async def parseStartMessage(m: Message):
         
         messageText = prepareGoodItemToSend(good, user)
         
-        loguru.logger.info(f"See good: {goodID}")
+        logger.info(f"See good: {goodID}")
 
         # If has product image - send with image
         if images != []:
@@ -54,7 +55,7 @@ async def parseStartMessage(m: Message):
                     img = Image.open(BytesIO(b_img))
                     img_size = img.size
                 except UnidentifiedImageError:
-                    loguru.logger.error('Failed to identify the image')
+                    logger.error('Failed to identify the image')
                     img_size = 0
                 print('Image size:', img_size)
                 # Check that image not too small

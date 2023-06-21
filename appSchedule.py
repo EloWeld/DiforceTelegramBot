@@ -49,7 +49,7 @@ def fillCatalog(catalog, data, head):
 
 
 async def catalogTreeSync():
-    loguru.logger.info(f"[CATALOG]: Start sync tree")
+    logger.info(f"[CATALOG]: Start sync tree")
     startTime = time.time()
     data = OneService.getCatalogTree()
     data.sort(key=lambda x: x['HeadGroupID'])
@@ -62,19 +62,19 @@ async def catalogTreeSync():
         MDB.Settings.insert_one(dict(id="Catalog"))
     MDB.Settings.update_one(dict(id="Catalog"), {
                             "$set": dict(catalog=catalog)})
-    loguru.logger.success(
+    logger.success(
         f"[CATALOG]: Catalogs tree has been updated successfully within {time.time() - startTime} seconds")
 
 
 async def catalogGoodsSync():
-    loguru.logger.info(f"[CATALOG]: Start sync catalog")
+    logger.info(f"[CATALOG]: Start sync catalog")
     startTime = time.time()
     data = OneService.getCatalog(with_image=False)
     MDB.Goods.delete_many({})
-    loguru.logger.info(f"[CATALOG]: All goods was deleted")
+    logger.info(f"[CATALOG]: All goods was deleted")
     for x in data:
         MDB.Goods.insert_one(x)
-    loguru.logger.success(
+    logger.success(
         f"[CATALOG]: Catalogs has been updated successfully within {time.time() - startTime} seconds")
 
 
@@ -83,7 +83,7 @@ async def goodRequestsCleaner():
         dict(CreatedAt={"$lt": datetime.datetime.now() - datetime.timedelta(days=1)}))
 
 async def diforceUsersSync():
-    loguru.logger.info("[DIFORCE-USERS]: Start sync users")
+    logger.info("[DIFORCE-USERS]: Start sync users")
     try:
         users = OneService.getUsers()
         user_groups = OneService.getUsersGroups()
@@ -104,9 +104,9 @@ async def diforceUsersSync():
         for f_user in filtered_users:
             MDB.DiforceUsers.insert_one(f_user)
     except Exception as e:
-        loguru.logger.error(
+        logger.error(
             f"[DIFORCE-USERS]: Can't sync diforce users!: {e}; traceback: {traceback.format_exc()}")
-    loguru.logger.info(f"[CATALOG]: Users synced")
+    logger.info(f"[CATALOG]: Users synced")
 
 async def clearLogs():
     with open('botlog_debug.log','w') as f:
@@ -138,7 +138,7 @@ schedule.every(12).hours.at(":00").do(lambda: asyncio.run(clearLogs()))
 schedule.every(50).minutes.at(":00").do(
     lambda: asyncio.run(goodRequestsCleaner()))
 
-loguru.logger.info("Starting scheduler")
+logger.info("Starting scheduler")
 asyncio.run(clearLogs())
 asyncio.run(goodRequestsCleaner())
 asyncio.run(catalogTreeSync())
@@ -149,6 +149,6 @@ while True:
     try:
         schedule.run_pending()
     except Exception as e:
-        loguru.logger.error(e)
+        logger.error(e)
         
     time.sleep(1)

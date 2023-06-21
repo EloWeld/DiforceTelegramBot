@@ -4,6 +4,7 @@ import loguru
 import requests
 from etc.filters import AntiSpam
 from etc.keyboards import Keyboards
+from loggerConf import logger
 from loader import MDB, dp, bot
 
 from aiogram import Bot, types
@@ -31,12 +32,12 @@ async def _(m: Message, command: Command.CommandObj, state: FSMContext):
         await state.finish()
     user = UserService.Get(m.from_user.id)
     if 'admin' in user.roles or user.is_admin:
-        loguru.logger.info(f"Updating text in databse with defaults")
+        logger.info(f"Updating text in databse with defaults")
 
         MDB.Settings.update_one(dict(id="Texts"), {"$set": Texts.ALL})
         await m.answer("Готово")
 
-        loguru.logger.success(f"✅ Done")
+        logger.success(f"✅ Done")
 
 @dp.message_handler(Command("priceList"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def get_price_list(m: Message, command: Command.CommandObj, state: FSMContext):
@@ -44,7 +45,7 @@ async def get_price_list(m: Message, command: Command.CommandObj, state: FSMCont
         await state.finish()
         
     user = UserService.Get(m.from_user.id)
-    loguru.logger.info(f"Sending price opt list to user: {user.id}|@{user.username}")
+    logger.info(f"Sending price opt list to user: {user.id}|@{user.username}")
     response = requests.get("https://diforce.ru/price.xlsx")
     if response.status_code == 200:
         with open("pricesOpt.xlsx", 'wb') as o:
@@ -63,7 +64,7 @@ async def get_price_list(m: Message, command: Command.CommandObj, state: FSMCont
         
     user = UserService.Get(m.from_user.id)
     if "admin" in user.roles or user.is_admin:
-        loguru.logger.info(f"Generating price list xlsx file for admin")
+        logger.info(f"Generating price list xlsx file for admin")
         
         # Отправка сообщения "⏳ Файл генерируется"
         generating_message = await m.reply("⏳ Файл генерируется")
@@ -78,7 +79,7 @@ async def get_price_list(m: Message, command: Command.CommandObj, state: FSMCont
         # Удаление файла после отправки
         os.remove(file_name)
         
-        loguru.logger.success(f"✅ Price list xlsx file sent")
+        logger.success(f"✅ Price list xlsx file sent")
 
 @dp.message_handler(Command("help"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def help_admin(m: Message, command: Command.CommandObj, state: FSMContext):

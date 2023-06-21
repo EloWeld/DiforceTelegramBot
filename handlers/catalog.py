@@ -14,7 +14,7 @@ from loader import MDB, dp, bot, Consts, message_id_links
 from io import BytesIO
 from PIL import Image
 from fuzzywuzzy import fuzz
-
+from loggerConf import logger
 from aiogram import Bot, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, Text, ChatTypeFilter
@@ -120,12 +120,12 @@ async def _(m: Message, state: FSMContext):
         await m.answer(Texts.RangeSetted)
     except Exception as e:
         await m.answer(Texts.InvalidRange)
-        loguru.logger.error(f"Invalid range or idk: error {e}")
+        logger.error(f"Invalid range or idk: error {e}")
         return
     # See goods
     catID = stateData.get('category_group_id', None)
 
-    loguru.logger.info(f"See catalog goods for category {catID}")
+    logger.info(f"See catalog goods for category {catID}")
 
     categories = GoodsService.GetCategoriesTree()
     cat = GoodsService.GetCategoryByID(catID, categories)
@@ -158,7 +158,7 @@ async def _(m: Message, state: FSMContext):
         await m.answer(Texts.FilteredGoodsMessage + f" ({len(goods)})",
                                 reply_markup=Keyboards.filteredGoods(cat, goods, req_id))
     except aiogram.utils.exceptions.BadRequest as e:
-        loguru.logger.error(f"{e}; {traceback.format_exc()}")
+        logger.error(f"{e}; {traceback.format_exc()}")
         await m.answer(Texts.TooManyGoodsException)
     
     
@@ -195,4 +195,4 @@ async def search_handler(m: Message, state: FSMContext):
     try:
         await bot.delete_message(m.chat.id, state_data.get('msg_id'))
     except Exception as e:
-        loguru.logger.error(f"Can't delete message: {e}")
+        logger.error(f"Can't delete message: {e}")

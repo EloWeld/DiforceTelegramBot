@@ -11,7 +11,7 @@ from loader import MDB, dp, bot, Consts, message_id_links
 from io import BytesIO
 from PIL import Image, UnidentifiedImageError
 from fuzzywuzzy import fuzz
-
+from loggerConf import logger
 from aiogram import Bot, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, Text, ChatTypeFilter
@@ -67,7 +67,7 @@ async def _(c: CallbackQuery, state: FSMContext):
                 try:
                     img = Image.open(BytesIO(b_img))
                 except UnidentifiedImageError:
-                    loguru.logger.error('Failed to identify the image')
+                    logger.error('Failed to identify the image')
                     return None
                 img_size = img.size
                 if img_size[0] * img_size[1] > 160000:
@@ -89,7 +89,7 @@ async def _(c: CallbackQuery, state: FSMContext):
             try:
                 mid = await c.message.answer_media_group(media_group)
             except Exception as e:
-                loguru.logger.error(f"Cant send media group: {media_group}; e: {e}; traceback: {traceback.format_exc()}")
+                logger.error(f"Cant send media group: {media_group}; e: {e}; traceback: {traceback.format_exc()}")
             sessionID = c.data.split(":")[3]
             sessionID2 = str(uuid4())[:10]
             txtMsg = await c.message.answer(f"📷⤴️ Дополнительные фотографии к товару <b>{cutText(good['ProductName'], 50)}</b> <i>({good['ProductArt']})</i>", reply_markup=Keyboards.hideAdditionalPhotos(sessionID2))

@@ -2,6 +2,7 @@ import datetime
 from typing import Optional, Union
 import loguru
 from loader import MDB
+from loggerConf import logger
 from dotdict import dotdict
 from aiogram import types
 from etc.helpers import rdotdict
@@ -29,7 +30,7 @@ class UserService:
             created_at=datetime.datetime.now()
         )
         MDB.Users.insert_one(u)
-        loguru.logger.success(
+        logger.success(
             f"[ USER ]: Added new user, ID: {u.id}; Username: @{u.username}")
 
         return rdotdict(u)
@@ -44,7 +45,7 @@ class UserService:
     @classmethod
     def Update(cls, user: dict):
         MDB.Users.update_one(dict(id=user['id']), {"$set": dict(user)})
-        loguru.logger.success(f"[ USER ]: User #{user['id']} is updated")
+        logger.success(f"[ USER ]: User #{user['id']} is updated")
 
     @classmethod
     def UpdateFromTgUser(cls, user: types.User):
@@ -84,7 +85,7 @@ class UserService:
             MDB.Users.delete_one(dict(id=user['id']))
         if isinstance(user, int):
             MDB.Users.delete_one(dict(id=user))
-        loguru.logger.warning(
+        logger.warning(
             f"[ USER ]: User #{user} deleted from database")
 
     @classmethod

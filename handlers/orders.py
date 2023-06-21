@@ -5,7 +5,7 @@ import datetime
 import traceback
 from uuid import uuid4
 from dotdict import dotdict
-
+from loggerConf import logger
 import loguru
 from aiogram import Bot, types
 from aiogram.dispatcher import FSMContext
@@ -171,7 +171,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         try:
             success_order_data = OneService.CreateOrder(user, storeID)
         except Exception as e:
-            loguru.logger.error(
+            logger.error(
                 f"Error on create order {e}: {traceback.format_exc()}")
             await c.message.answer("❌ не удалось создать заказ в 1С!")
             return
@@ -237,7 +237,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
                 for part in message_parts:
                     await bot.send_message(Consts.OrderManagerID, part, parse_mode='HTML', reply_markup=types.ReplyKeyboardRemove())
             except Exception as e:
-                loguru.logger.error(
+                logger.error(
                     f"Can't send message to user about order: {e}, {traceback.format_exc()}")
                 await bot.send_message(Consts.OrderManagerID, f"Не удалось отправить сообщение о заказе #{success_order_data['CreatedOrderID']} покупателя <a href='tg://user?id={user.id}'>{user['diforce_data']['FullName']}</a>")
         else:

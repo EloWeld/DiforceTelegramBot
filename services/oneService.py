@@ -2,6 +2,7 @@ import datetime
 from typing import List
 import loguru
 import requests
+from loggerConf import logger
 import urllib.parse
 from loggerConf import logger
 from etc.helpers import rdotdict
@@ -73,14 +74,14 @@ class OneServiceBase:
     def GetOrdersByUser(self, user):
         r = self.session.get(self.base_endpoint+"getOrdersHistory", params=dict(ClientID=user['diforce_data']['ID']))
         if r.status_code != 200:
-            loguru.logger.error(
+            logger.error(
                 f"Can't get orders history; Response: {r.text}, Status: {r.status_code}")
         return r.json()
     
     def GetAllOrders(self):
         r = self.session.get(self.base_endpoint+"getOrdersHistory")
         if r.status_code != 200:
-            loguru.logger.error(
+            logger.error(
                 f"Can't get orders history; Response: {r.text}, Status: {r.status_code}")
         return r.json()
         
@@ -93,10 +94,10 @@ class OneServiceBase:
             }, timeout=REQUESTS_TIMEOUT*10 if group_id else 99999)
 
             if r.status_code != 200:
-                loguru.logger.error(
+                logger.error(
                     f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
             if 'Ошибка' in r.text:
-                loguru.logger.error(
+                logger.error(
                     f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
             data = r.json()
 
@@ -119,7 +120,7 @@ class OneServiceBase:
                 "ProductID": good_id
             }, timeout=REQUESTS_TIMEOUT)
             if r.status_code != 200:
-                loguru.logger.error(
+                logger.error(
                     f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
             result = r.json()
             if len(result) == 0:
@@ -139,7 +140,7 @@ class OneServiceBase:
 
             r = self.session.get(self.base_endpoint + "getCatalogTree", timeout=REQUESTS_TIMEOUT)
             if r.status_code != 200:
-                loguru.logger.error(
+                logger.error(
                     f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
             return r.json()
         except requests.exceptions.Timeout:
@@ -150,14 +151,14 @@ class OneServiceBase:
     def getUsers(self):
         r = self.session.get(self.base_endpoint+"getUsers")
         if r.status_code != 200:
-            loguru.logger.error(
+            logger.error(
                 f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
         return r.json()
     
     def getUsersGroups(self):
         r = self.session.get(self.base_endpoint+"getUsersTree")
         if r.status_code != 200:
-            loguru.logger.error(
+            logger.error(
                 f"Can't get users groups; Response: {r.text}, Status: {r.status_code}")
         return r.json()
 
@@ -165,7 +166,7 @@ class OneServiceBase:
         r = self.session.get(self.base_endpoint+"getUser",
                              params={"id": user_id})
         if r.status_code != 200:
-            loguru.logger.error(
+            logger.error(
                 f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
         return r.json()
 
@@ -176,14 +177,14 @@ class OneServiceBase:
         r = self.session.get(self.base_endpoint + "getProductImages", params=p)
 
         if r.status_code != 200:
-            loguru.logger.error(
+            logger.error(
                 f"Can't get images; Response: {r.text}, Status: {r.status_code}")
         images = []
         data = r.json()
         for x in data:
             if 'ProductImage' in x:
                 images += [data[x]]
-        loguru.logger.info(
+        logger.info(
             f"Get product images with sizes: {[len(x) for x in images]}")
         if images == [""]:
             return []
@@ -204,11 +205,11 @@ class OneServiceBase:
                                   ]
                               })
         if r.status_code != 200 or r.text == '':
-            loguru.logger.error(
+            logger.error(
                 f"Can't create order, error from 1c, response: {r.text}, Status: {r.status_code}")
             return None
         if 'MessageError' in r.json():
-            loguru.logger.error(f"Can't create order, error from 1c: {r.json()['MessageError']}")
+            logger.error(f"Can't create order, error from 1c: {r.json()['MessageError']}")
             return None
         return r.json()
             
@@ -234,7 +235,7 @@ class OneServiceBase:
                              timeout=REQUESTS_TIMEOUT)
 
         if r.status_code != 200:
-            loguru.logger.error(
+            logger.error(
                 f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
             
         rdata = r.json()
@@ -245,7 +246,7 @@ class OneServiceBase:
                              params={"OrderID": order_id,
                                      "ClientID":diforce_user_id})
         if r.status_code != 200:
-            loguru.logger.error(
+            logger.error(
                 f"Can't get catalog; Response: {r.text}, Status: {r.status_code}")
         return r.json()
 

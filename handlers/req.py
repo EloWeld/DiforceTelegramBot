@@ -6,6 +6,7 @@ import traceback
 from typing import Any, List, Union
 from uuid import uuid4
 import aiogram
+from loggerConf import logger
 import loguru
 import pymongo
 from etc.helpers import wrap_media
@@ -98,7 +99,7 @@ async def attach_photo(goodID, good_pic_messages: List[Message]):
             try:
                 img = Image.open(BytesIO(b_img))
             except UnidentifiedImageError:
-                loguru.logger.error('Failed to identify the image')
+                logger.error('Failed to identify the image')
                 return None
             img_size = img.size
             if img_size[0] * img_size[1] > 160000:
@@ -145,7 +146,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         if catID == "":
             await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
             return
-        loguru.logger.info(f"See catalog for category {catID}")
+        logger.info(f"See catalog for category {catID}")
 
         if cat == None:
             await c.message.answer(f"А вот оказывается тут баг и категории {catID} не существует")
@@ -186,7 +187,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         
         messageText = prepareGoodItemToSend(good, user)
         
-        loguru.logger.info(f"See good: {goodID}")
+        logger.info(f"See good: {goodID}")
         await c.answer()
         sessionID = str(uuid4())[:9]
         keyboard = Keyboards.goodOptions(user, good, media_group_message_id=sessionID)
@@ -278,7 +279,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         selected_brands = stateData.get("selected_brands", [])
         catID = stateData['category_group_id']
 
-        loguru.logger.info(f"See catalog goods for category {catID}")
+        logger.info(f"See catalog goods for category {catID}")
 
         categories = GoodsService.GetCategoriesTree()
         cat = GoodsService.GetCategoryByID(catID, categories)
@@ -310,7 +311,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             await c.message.answer(Texts.BrandsGoodsMessage.format(goods_count=len(goods)),
                                     reply_markup=Keyboards.filteredGoods(cat, goods, req_id))
         except aiogram.utils.exceptions.BadRequest as e:
-            loguru.logger.error(f"{e}; {traceback.format_exc()}")
+            logger.error(f"{e}; {traceback.format_exc()}")
             await c.message.answer(Texts.TooManyGoodsException)
 
     elif action == "cancel_filter":
@@ -347,5 +348,5 @@ async def _(c: CallbackQuery, state: FSMContext):
     try:
         await c.message.edit_reply_markup(reply_markup=Keyboards.filteredGoods(category, goods, req_id, start_index))
     except aiogram.utils.exceptions.BadRequest as e:
-        loguru.logger.error(f"{e}; {traceback.format_exc()}")
+        logger.error(f"{e}; {traceback.format_exc()}")
         await c.message.answer(Texts.TooManyGoodsException)

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import loguru
 from aiogram.dispatcher.filters import BoundFilter
 from aiogram.types import Message, CallbackQuery
+from loggerConf import logger
 
 usersMsgData = dotdict()
 banTime = 5
@@ -34,7 +35,7 @@ class AntiSpam(BoundFilter):
                     try:
                         await m.reply("Пожалуйста, не спамьте!")
                     except Exception as e:
-                        loguru.logger.debug(f"[ ANTI-SPAM ]: Can't reply to message {m.message_id} | {e}")
+                        logger.debug(f"[ ANTI-SPAM ]: Can't reply to message {m.message_id} | {e}")
                     usersMsgData[user].banExpire = datetime.now() + timedelta(seconds=banTime)
                     allow = False
         else:

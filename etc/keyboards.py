@@ -307,7 +307,7 @@ class Keyboards:
     
     @staticmethod
     def ParseLinks(links):
-        import loguru
+        from loggerConf import logger
         k = IKeyboard()
         try:
             for group in links.strip().split('\n'):
@@ -319,7 +319,7 @@ class Keyboards:
                     k.insert(IButton(text.strip(), url=url.strip()))
             return k
         except Exception as e:
-            loguru.logger.error(f"Can't parse keyboard, {e}")
+            logger.error(f"Can't parse keyboard, {e}")
             return None
         
     @staticmethod

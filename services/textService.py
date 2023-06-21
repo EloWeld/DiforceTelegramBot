@@ -1,6 +1,6 @@
 import loguru
 from loader import MDB
-
+from loggerConf import logger
 savedTexts = {}
 
 verbose = {None: "Не указано", "non_cash": "💳 Безнал", "cash":"💰 Наличные",
@@ -180,18 +180,18 @@ class TextsMetaClass(type):
             doc = MDB.Settings.insert_one(dict(id="Texts"))
 
         if key in doc:
-            loguru.logger.success(f"[TEXTS]: Saved text for key: {key}")
+            logger.success(f"[TEXTS]: Saved text for key: {key}")
             return doc[key]
         elif key in cls.__defaultTexts:
             t_value = cls.__defaultTexts[key]
             MDB.Settings.update_one(
                 dict(id="Texts"), {"$set": {key: t_value}})
-            loguru.logger.success(f"[TEXTS]: Saved text for key: {key}")
+            logger.success(f"[TEXTS]: Saved text for key: {key}")
             return t_value
         elif key == "ALL":
             return cls.__defaultTexts
         else:
-            loguru.logger.error(
+            logger.error(
                 f"[TEXTS]: Can't found default text for key \"{key}\"")
 
         raise AttributeError(key)

@@ -4,6 +4,7 @@ from loader import MDB, bot
 from services.textService import Texts
 from services.userService import UserService
 import re
+from loggerConf import logger
 
 def split_message_by_html_tags(message, max_length):
     pattern = r'(<[^>]+>)'
@@ -33,7 +34,7 @@ async def notifyAdmins(text: str):
         try:
             await bot.send_message(admin['id'], text)
         except Exception as e:
-            loguru.logger.error(f"Can't send message to admin: {e}")
+            logger.error(f"Can't send message to admin: {e}")
 
 def split_long_text(text: str, max_length: int = 4000):
     parts = []
@@ -51,7 +52,7 @@ async def tryDelete(msg):
     try:
         await msg.delete()
     except Exception as e:
-        loguru.logger.error(f"Can't delete message, doesnt exists anymore")
+        logger.error(f"Can't delete message, doesnt exists anymore")
 
 
 def prepareUserToPrint(xUser):

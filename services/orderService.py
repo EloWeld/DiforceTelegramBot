@@ -4,7 +4,7 @@ from loader import MDB
 from dotdict import dotdict
 from etc.helpers import rdotdict
 from services.oneService import OneService
-
+from loggerConf import logger
 
 class OrderService:
     @classmethod
@@ -50,7 +50,7 @@ class OrderService:
     @classmethod
     def Update(cls, order):
         MDB.Orders.update_one(dict(id=order['id']), {"$set": dict(order)})
-        loguru.logger.success(f"[ ORDER ]: Order #{order['id']} is updated")
+        logger.success(f"[ ORDER ]: Order #{order['id']} is updated")
 
     @classmethod
     def GetOrdersByUser(cls, user):
