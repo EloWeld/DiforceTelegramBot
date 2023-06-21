@@ -93,7 +93,7 @@ async def showCart(user, start: int=0):
         await bot.send_message(user.id, Texts.YourCartIsEmpty)
         return
     
-    for cartItemID, cartItem in list(user['cart'].items())[start:start+30]:
+    for cartItemID, cartItem in list(user['cart'].items())[start:start+10]:
         cartItems.append(dotdict(cartItem))
         good = MDB.Goods.find_one(dict(ProductID=cartItems[-1].ProductID))
         x = GoodsService.GetTargetPrice(user, good)
@@ -109,13 +109,13 @@ async def showCart(user, start: int=0):
     cartText = '\n'.join(Texts.CartItemTextFormat.format(**x)
                          for x in cartItems)
     
-    if len(user['cart']) - 30 > 0:
-        cartText += f"\n И ещё {format_plural(len(user['cart']) - 30, 'товар', 'товара', 'товаров')}"
+    if len(user['cart']) - 10 > 0:
+        cartText += f"\n И ещё {format_plural(len(user['cart']) - 10, 'товар', 'товара', 'товаров')}"
 
     cartPriceString = f"{getCartPrice(user):,}".replace(',', ' ')
 
     await bot.send_message(user.id, Texts.YourCartMessage.format(cart_text=cartText,
-                                                                 cart_price=cartPriceString), reply_markup=Keyboards.yourCart(cartItems, start))
+                                                                 cart_price=cartPriceString), reply_markup=Keyboards.yourCart(list(user['cart'].items()), start))
 
 
 

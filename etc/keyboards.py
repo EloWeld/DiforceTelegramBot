@@ -256,14 +256,14 @@ class Keyboards:
     @staticmethod
     def yourCart(cartItems, start=0):
         k = IKeyboard(row_width=1)
-        for cartItem in cartItems[start:start+30]:
-            k.row(IButton(cartItem.ProductName,
-                  callback_data=f"|Cart:see_cart_item:{cartItem.ProductID}"))
+        for cartItemID, cartItem in cartItems[start:start+10]:
+            k.row(IButton(cartItem['ProductName'],
+                  callback_data=f"|Cart:see_cart_item:{cartItemID}"))
         
-        if len(cartItems) > 30:
+        if len(cartItems) > 10:
             k.row()
-            k.insert(IButton("◀️ Предыдущие", callback_data=f"|Cart:main:{start-30}"))
-            k.insert(IButton("▶️ Следующие", callback_data=f"|Cart:main:{start+30}"))
+            k.insert(IButton("◀️ Предыдущие", callback_data=f"|Cart:main:{start-10}"))
+            k.insert(IButton("▶️ Следующие", callback_data=f"|Cart:main:{start+10}"))
         
         k.row()
         k.insert(IButton(Texts.ClearCart, callback_data=f"|Cart:clear_all"))
