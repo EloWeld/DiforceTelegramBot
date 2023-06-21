@@ -255,7 +255,7 @@ class Keyboards:
 
     @staticmethod
     def yourCart(cartItems, start=0):
-        k = IKeyboard(row_width=1)
+        k = IKeyboard(row_width=2)
         for cartItemID, cartItem in cartItems[start:start+10]:
             k.row(IButton(cartItem['ProductName'],
                   callback_data=f"|Cart:see_cart_item:{cartItemID}"))

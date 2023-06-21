@@ -109,8 +109,8 @@ async def showCart(user, start: int=0):
     cartText = '\n'.join(Texts.CartItemTextFormat.format(**x)
                          for x in cartItems)
     
-    if len(user['cart']) - 10 > 0:
-        cartText += f"\n И ещё {format_plural(len(user['cart']) - 10, 'товар', 'товара', 'товаров')}"
+    if len(user['cart']) - start - 10 > 10:
+        cartText += f"\n И ещё {format_plural(len(user['cart']) - start - 10, 'товар', 'товара', 'товаров')}"
 
     cartPriceString = f"{getCartPrice(user):,}".replace(',', ' ')
 
@@ -184,7 +184,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
     if action == "main":
         start = 0
-        if len(c.data.split(":")) == 2:
+        if len(c.data.split(":")) == 3:
             start = int(c.data.split(":")[2])
         if start < 0:
             await c.answer("Вы в начале")
@@ -193,6 +193,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
             await c.answer("Вы в конце")
             return
         await showCart(user, start=start)
+        await c.message.delete()
     if action == "clear_all":
         user['cart'] = {}
         UserService.Update(user)
