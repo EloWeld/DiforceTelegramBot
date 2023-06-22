@@ -6,19 +6,21 @@ from services.userService import UserService
 import re
 from loggerConf import logger
 
-def split_message_by_html_tags(message, max_length):
-    pattern = r'(<[^>]+>)'
-    parts = re.split(pattern, message)
+def split_message_by_new_line(message, max_length):
+    parts = message.split('\n')
     result_parts = []
     current_part = ''
+
     for part in parts:
-        if len(current_part) + len(part) <= max_length:
-            current_part += part
+        if len(current_part) + len(part) + 1 <= max_length:  # +1 для символа новой строки
+            current_part += part + '\n'
         else:
             result_parts.append(current_part)
-            current_part = part
+            current_part = part + '\n'
+
     if current_part:
         result_parts.append(current_part)
+
     return result_parts
 
 def format_plural(number, form1, form2, form3):

@@ -12,7 +12,7 @@ from services.orderService import OrderService
 from services.textService import Texts
 from services.userService import UserService
 from loader import dp
-from utils import cutText, format_fio, split_message_by_html_tags
+from utils import cutText, format_fio, split_message_by_new_line
     
 def get_personal_cabinet_text(user):
     text = f"Личный кабинет пользователя {user.fullname}\n"
@@ -45,7 +45,7 @@ async def order_info(call: CallbackQuery):
 }
 """f"" 
   # Разделение сообщения на части с учетом HTML-разметки
-    message_parts = split_message_by_html_tags(order_text, max_length=4096)
+    message_parts = split_message_by_new_line(order_text, max_length=4096)
 
 
     # Отправка сообщения с информацией о заказе и кнопками "Назад" и "Повторить заказ"
