@@ -73,6 +73,7 @@ def cutText(text: str, limit: int):
 def prepareGoodItemToSend(good, user):
     """Prepare cart item message text for sending."""
     good['PriceType'] = user['optText'] if user['optText'] else "РОЗНИЦА"
+    good['Price'] = f"{GoodsService.GetTargetPrice(user, good):,}".replace(',', ' ')
     good['Price'] = f"{good['Price']:,}".replace(',', ' ')
     good['ProductDescription'] = good['ProductDescription'].replace('<', '‹').replace('>', '›')
     good['ProductName'] = good['ProductName'].replace('<', '‹').replace('>', '›')
