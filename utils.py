@@ -1,6 +1,7 @@
 import re
 import loguru
 from loader import MDB, bot
+from services.goodsService import GoodsService
 from services.textService import Texts
 from services.userService import UserService
 import re
@@ -84,7 +85,7 @@ def prepareGoodItemToSend(good, user):
 def prepareCartItemToSend(good, cartItem, user):
     """Prepare cart item message text for sending."""
     good['PriceType'] = user['optText'] if user['optText'] else "РОЗНИЦА"
-    good['Price'] = f"{good['Price']:,}".replace(',', ' ')
+    good['Price'] = f"{GoodsService.GetTargetPrice(user, good):,}".replace(',', ' ')
     good['ProductDescription'] = good['ProductDescription'].replace('<', '‹').replace('>', '›')
     good['ProductName'] = good['ProductName'].replace('<', '‹').replace('>', '›')
     messageText = Texts.GoodCard.format(
