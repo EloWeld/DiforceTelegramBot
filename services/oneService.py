@@ -37,8 +37,9 @@ def adaptGood(good: dict, goodEntities: List[dict] = None):
     from etc.helpers import rdotdict
     
     good['UpdateTime'] = datetime.datetime.now()
-    good['Price'] = good['Price000000005']
     good['ProductArt'] = good['ProductART']
+    # For old users
+    good['Price'] = good['Price000000005']
     good['PriceOptSmall'] = good['Price000000004']
     good['PriceOptMiddle'] = good['Price000000003']
     good['PriceOptLarge'] = good['PriceЦБ0000001']
@@ -56,11 +57,7 @@ def adaptGood(good: dict, goodEntities: List[dict] = None):
     except Exception:
         good['QtyInStore'] = 0
     
-    for x in ["Price000000005",
-              "ProductART",
-              "Price000000004",
-              "Price000000003",
-              "PriceЦБ0000001"]:
+    for x in ["ProductART"]:
         del good[x]
     return rdotdict(good)
 
