@@ -20,6 +20,7 @@ def get_personal_cabinet_text(user):
     if user.is_authenticated:
         text += "\n<b>✅ Вход выполнен ✅</b>\n"
         text += f"\nНаименование: <code>{format_fio(user['diforce_data'].get('FullName', '')).title()}</code>\n"
+        text += f"Тип цен: <code>{user.get('optText', 'РОЗНИЦА')}</code>\n"
         text += f"ID: <code>{user['diforce_data'].get('ID', 'Не указано')}</code>\n"
         text += f"ИНН: <code>{user['diforce_data'].get('INN', 'Не указано')}</code>\n"
         text += f"КПП: <code>{user['diforce_data'].get('KPP', 'Не указано')}</code>\n"

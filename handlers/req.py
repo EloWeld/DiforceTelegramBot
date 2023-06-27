@@ -61,7 +61,7 @@ def apply_req(req: dict, user, exclude_filter=None):
     goods = list(MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']}, QtyInStore={"$gt": 0})))
     if 'PriceFilter' in req['AppliedFilters'] and exclude_filter != 'PriceFilter':
         try:
-            pr = 'Price' + user['diforce_data']['ContractTypeCode']
+            pr = 'Price' + user['opt']
         except Exception:
             pr = 'Price000000005'
         min_price = req['AppliedFilters']['PriceFilter']['min_price']

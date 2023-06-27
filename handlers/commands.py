@@ -1,5 +1,6 @@
 from io import BytesIO
 import os
+import time
 import loguru
 import requests
 from etc.filters import AntiSpam
@@ -39,6 +40,8 @@ async def _(m: Message, command: Command.CommandObj, state: FSMContext):
 
         logger.debug(f"✅ Done")
 
+
+
 @dp.message_handler(Command("priceList"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
 async def get_price_list(m: Message, command: Command.CommandObj, state: FSMContext):
     if state:
@@ -54,6 +57,22 @@ async def get_price_list(m: Message, command: Command.CommandObj, state: FSMCont
         await bot.send_document(chat_id=m.chat.id, document=InputFile('pricesOpt.xlsx'))
     else:
         await m.answer("🕸️ Не удалось загрузить файл. Пожалуйста, попробуйте позже.")
+    
+
+
+@dp.message_handler(Command("fixUsers"), AntiSpam(), state="*", chat_type=ChatType.PRIVATE)
+async def _(m: Message, command: Command.CommandObj, state: FSMContext):
+    from loader import Consts
+    user = UserService.Get(m.from_user.id)
+    if user['is_admin']:
+        values = list(dict(Consts.ContractTypes).values())
+        for x_user in list(MDB.Users.find(dict())):
+            if x_user['optText'] in values:
+                for key, name in Consts.ContractTypes.items():
+                    if name == x_user['optText']:
+                        MDB.Users.update_one(dict(id=x_user['id']), {"$set": {"opt": key}})
+                        await m.answer(f"User {x_user['fullname']} changed")
+                        time.sleep(2)
     
         
 
