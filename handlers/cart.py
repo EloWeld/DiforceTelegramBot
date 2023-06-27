@@ -231,6 +231,9 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
 
     if action in actions:
         goodsID = c.data.split(':')[2]
+        if goodsID not in user.cart:
+            await c.answer("❌ Такого товара нет в корзине")
+            return
         cartItem = user.cart[goodsID]
         good = GoodsService.GetGoodByID(goodsID)
         await actions[action](c, user, goodsID, good, cartItem)

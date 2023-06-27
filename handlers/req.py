@@ -60,7 +60,10 @@ def search_objects(objects_list, search_query):
 def apply_req(req: dict, user, exclude_filter=None):
     goods = list(MDB.Goods.find(dict(ProductID={"$in": req['GoodsIDs']}, QtyInStore={"$gt": 0})))
     if 'PriceFilter' in req['AppliedFilters'] and exclude_filter != 'PriceFilter':
-        pr = 'PriceOptSmall' if user['opt'] == "SmallOpt" else 'PriceOptMiddle' if user['opt'] == "MiddleOpt" else 'PriceOptLarge' if user['opt'] == "LargeOpt" else 'Price'
+        try:
+            pr = 'Price' + user['diforce_data']['ContractTypeCode']
+        except Exception:
+            pr = 'Price000000005'
         min_price = req['AppliedFilters']['PriceFilter']['min_price']
         max_price = req['AppliedFilters']['PriceFilter']['max_price']
         goods = [x for x in goods if min_price  <= x[pr] <= max_price]

@@ -14,14 +14,8 @@ class GoodsService:
         try:
             if user['opt'] == None:
                 return good['Price']
-            elif user['opt'] == "SmallOpt":
-                return good['PriceOptSmall']
-            elif user['opt'] == "MiddleOpt":
-                return good['PriceOptMiddle']
-            elif user['opt'] == "LargeOpt":
-                return good['PriceOptLarge']
             else:
-                return good['Price']
+                return good['Price' + user['opt']]
         except Exception as e:
             logger.error(f"{e}, {good}, {user}")
 

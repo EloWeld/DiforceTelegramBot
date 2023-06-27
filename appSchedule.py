@@ -84,6 +84,7 @@ async def goodRequestsCleaner():
 
 async def diforceUsersSync():
     logger.info("[DIFORCE-USERS]: Start sync users")
+    contractTypes = {}
     try:
         users = OneService.getUsers()
         user_groups = OneService.getUsersGroups()
@@ -95,14 +96,15 @@ async def diforceUsersSync():
                 x_user['Phone'] = format_phone_number(x_user['Phone'])
             if is_in_group_hierarchy(x_user['GroupID'], ALLOWED_USER_GROUPS, user_groups):
                 filtered_users.append(x_user)
+                contractTypes[x_user['ContractTypeCode']] = x_user['ContractType']
             else:
                 g = [x for x in user_groups if x['GroupID'] == x_user['GroupID']]
                 excluded_user_groups.add(g[0]['GroupName'] if g else '???')
                 
         logger.info(excluded_user_groups)
         MDB.DiforceUsers.delete_many({})
-        for f_user in filtered_users:
-            MDB.DiforceUsers.insert_one(f_user)
+        MDB.DiforceUsers.insert_many(filtered_users)
+        MDB.Settings.update_one(dict(id="Constants"), {"$set": dict(ContractTypes=contractTypes)})
     except Exception as e:
         logger.error(
             f"[DIFORCE-USERS]: Can't sync diforce users!: {e}; traceback: {traceback.format_exc()}")

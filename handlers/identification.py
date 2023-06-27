@@ -92,17 +92,7 @@ async def process_inn(message: types.Message, state: FSMContext):
             await message.answer(f"✅ Спасибо! Вы идентифицированы!", reply_markup=Keyboards.startMenu(user))
             
             user['optText'] = user['diforce_data']['ContractType']
-            if user['diforce_data']['ContractType'] in ["МЕЛКООПТОВААЯ", "ОПТОВАЯ"]:
-                user['roles'] = list(set(user['roles']+["SmallOpt"]))
-                user['opt'] = "SmallOpt"
-            elif user['diforce_data']['ContractType'] in ["СПЕЦ ЦЕНА ОПТОВАЯ"]:
-                user['roles'] = list(set(user['roles']+["MiddleOpt"]))
-                user['opt'] = "MiddleOpt"
-            elif user['diforce_data']['ContractType'] == "КРУПНЫЙ ОПТ":
-                user['roles'] = list(set(user['roles']+["LargeOpt"]))
-                user['opt'] = "LargeOpt"
-            else:
-                user['opt'] = "Retail"
+            user['opt'] = user['diforce_data']['ContractTypeCode']
             
             UserService.Update(user)
         else:

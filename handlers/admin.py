@@ -150,20 +150,14 @@ async def process_mailing_confirm(call: types.CallbackQuery, state: FSMContext):
             return f"<a href='https://t.me/{user.username}'>{user.fullname}</a> | <a href='https://t.me/{Consts.BotUsername}?start=user_info_{user.id}'>Инфо</a>"
         
 
-    if action in ['SmallOpt','MiddleOpt','LargeOpt', 'admin', 'user']:
-        if action == "SmallOpt":
-            users = [user for user in UserService.All() if 'SmallOpt' in user.roles or user.opt == "SmallOpt"]
-            users_text = f"Список пользователей с ролью Оптовик Мелкий.:\n\n"
-        if action == "MiddleOpt":
-            users = [user for user in UserService.All() if 'MiddleOpt' in user.roles or user.opt == "MiddleOpt"]
-            users_text = f"Список пользователей с ролью Оптовик Средний:\n\n"
-        if action == "LargeOpt":
-            users = [user for user in UserService.All() if 'LargeOpt' in user.roles or user.opt == "LargeOpt"]
-            users_text = f"Список пользователей с ролью Оптовик Крупный:\n\n"
-        if action == "user":
-            users = [user for user in UserService.All() if (user.roles == ["user"] or user.opt in [None, 'Retail']) and 'admin' not in user.roles and not user.is_admin]
+    if action in ['admin', 'user'] + list(Consts.ContractTypes):
+        if action in list(Consts.ContractTypes):
+            users = [user for user in UserService.All() if user.opt == action]
+            users_text = f"Список пользователей с ролью {Consts.ContractTypes[action]}:\n\n"
+        elif action == "user":
+            users = [user for user in UserService.All() if (user.roles == ["user"] or user.opt in [None]) and 'admin' not in user.roles and not user.is_admin]
             users_text = f"Список пользователей с ролью Пользователь:\n\n"
-        if action == "admin":
+        elif action == "admin":
             users = [user for user in UserService.All() if 'admin' in user or user.is_admin]
             users_text = f"Список пользователей с ролью Админ:\n\n"
             

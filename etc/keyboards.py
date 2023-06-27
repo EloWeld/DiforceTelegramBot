@@ -5,6 +5,7 @@ from aiogram.types import \
     InlineKeyboardMarkup as IKeyboard, \
     InlineKeyboardButton as IButton
 from dotdict import dotdict
+from loader import Consts
 
 from services.textService import Texts
 
@@ -342,25 +343,23 @@ class Keyboards:
     
     @staticmethod
     def BotUsersTypes():
-        markup = IKeyboard()
+        k = IKeyboard()
         
-        markup.row(IButton(Texts.BotUsersDefaultButton, callback_data="bot_users:user"))
+        k.row(IButton(Texts.BotUsersDefaultButton, callback_data="bot_users:user"))
+        for contractTypeCode in Consts.ContractTypes:
+            k.row(IButton(Consts.ContractTypes[contractTypeCode], callback_data=f"bot_users:{contractTypeCode}"))
+            
         
-        markup.row(IButton(Texts.BotUsersOpt1Button, callback_data="bot_users:LargeOpt"))
-        markup.row(IButton(Texts.BotUsersOpt2Button, callback_data="bot_users:MiddleOpt"))
-        markup.row(IButton(Texts.BotUsersOpt3Button, callback_data="bot_users:LargeOpt"))
-        
-        
-        markup.row(IButton(Texts.BotUsersAdminsButton, callback_data="bot_users:admin"))
-        return markup
+        k.row(IButton(Texts.BotUsersAdminsButton, callback_data="bot_users:admin"))
+        return k
     
     @staticmethod
     def UserInfoFromAdmin(user):
         k = IKeyboard()
         k.row(IButton("История заказов", callback_data=f"operate_user:user_history:{user.id}"))
-        k.row(IButton("Назначить мелкий опт", callback_data=f"operate_user:set_opt:SmallOpt:{user.id}"))
-        k.row(IButton("Назначить средний опт", callback_data=f"operate_user:set_opt:MiddleOpt:{user.id}"))
-        k.row(IButton("Назначить крупный опт", callback_data=f"operate_user:set_opt:LargeOpt:{user.id}"))
+        
+        for contractTypeCode in Consts.ContractTypes:
+            k.row(IButton("Назначить тип цен " + Consts.ContractTypes[contractTypeCode], callback_data=f"operate_user:set_opt:{contractTypeCode}:{user.id}"))
         k.row(IButton("Назначить админом", callback_data=f"operate_user:set_admin:{user.id}"))
         return k
     
