@@ -166,7 +166,7 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
         for product_id, cartItem in cart.items():
             good = MDB.Goods.find_one({'ProductID': product_id})
             cartItem['Price'] = GoodsService.GetTargetPrice(
-                user, good) if good else -1
+                user, good) if good else 0
 
         try:
             success_order_data = OneService.CreateOrder(user, storeID)
@@ -214,9 +214,11 @@ async def cart_callback_handler(c: CallbackQuery, state: FSMContext):
                     price = cartItem['Price']
                     quantity = cartItem['Quantity']
                     item_total = price * quantity
-
-                    order_text += f"<code>{quantity} шт</code> * <code>{price}₽</code> = <code>{item_total}₽</code> | <code>{product_id}</code> | <b>{cartItem['ProductName']}</b>\n\n"
-                order_cost_text = f"{cart_price:,}₽".replace(',', ' ')
+                    if item_total == 0:
+                        order_text += f"⚠️ Ошибка при получении цены для товара <code>{product_id}</code> <b>| {cartItem['ProductName']} | </b><code>{quantity}</code><b> шт.</b>\n\n"
+                    else:    
+                        order_text += f"<code>{quantity} шт</code> * <code>{price}₽</code> = <code>{item_total}₽</code> | <code>{product_id}</code> | <b>{cartItem['ProductName']}</b>\n\n"
+                order_cost_text = f"{round(cart_price, 2):,}₽".replace(',', ' ')
                 if order_data['DeliveryMethod'] == 'delivery' and cart_price < 3000:
                     order_cost_text += f" + {order_data['DeliveryPrice']:,}₽ доставка".replace(',', ' ')
                 formatted_summary = f"Общая сумма: <code>{order_cost_text}</code>"
