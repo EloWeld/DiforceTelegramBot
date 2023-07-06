@@ -84,7 +84,6 @@ async def _(m: Message, command: Command.CommandObj, state: FSMContext):
     
     if state:
         await state.finish()
-        
     await parseStartMessage(m)
 
     # Create or UpdateUser
