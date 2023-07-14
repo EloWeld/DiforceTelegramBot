@@ -76,6 +76,9 @@ def prepareGoodItemToSend(good, user):
     good['Price'] = f"{GoodsService.GetTargetPrice(user, good):,}".replace(',', ' ')
     good['ProductDescription'] = good['ProductDescription'].replace('<', '‹').replace('>', '›')
     good['ProductName'] = good['ProductName'].replace('<', '‹').replace('>', '›')
+    if "не найден" in good['ColorName']:
+        good['ColorName'] = "❌"
+    good['ColorName'] = good['ColorName'].replace('<', '‹').replace('>', '›')
     good['ProductDescription'] = cutText(good['ProductDescription'], 3500)
     messageText = Texts.GoodCard.format(**good)
     return messageText
