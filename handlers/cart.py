@@ -96,7 +96,9 @@ async def showCart(user, start: int=0):
     for cartItemID, cartItem in list(user['cart'].items())[start:start+10]:
         cartItems.append(dotdict(cartItem))
         good = MDB.Goods.find_one(dict(ProductID=cartItems[-1].ProductID))
-        x = GoodsService.GetTargetPrice(user, good)
+        x = None
+        if good:
+            x = GoodsService.GetTargetPrice(user, good)
         if not x:
             cartItems = cartItems[:-1]
             continue

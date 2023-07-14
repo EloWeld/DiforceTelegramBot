@@ -18,6 +18,7 @@ class GoodsService:
                 return good['Price' + user['opt']]
         except Exception as e:
             logger.error(f"{e}, {good}, {user}")
+            return 0
 
     @staticmethod
     def GetCategoriesTree() -> rdotdict:
