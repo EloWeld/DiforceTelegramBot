@@ -122,8 +122,8 @@ class Keyboards:
             
         if len(categories) > 20:
             k.row()
-            k.insert(IButton("⬅️", callback_data=f"|Catalog:root_categories:{start_ind-20}"))
-            k.insert(IButton("➡️", callback_data=f"|Catalog:root_categories:{start_ind+20}"))
+            k.insert(IButton("⬅️", callback_data=f"admin:change_catalog_order_next:{start_ind-20}"))
+            k.insert(IButton("➡️", callback_data=f"admin:change_catalog_order_next:{start_ind+20}"))
         
         k.row(IButton("Сохранить",
                              callback_data=f"admin:save_categories_order"))

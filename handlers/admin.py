@@ -70,6 +70,11 @@ async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):
 
         selected_categories_dict['cats'] = OrderedDict(sorted(selected_categories_dict['cats'].items(), key=lambda x: x[1]['order']))
         await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat))
+    elif action == "change_catalog_order_next":
+        start_index = c.data.split(":")[2]
+        selected_cat = (await state.get_data()).get('selected_cat', None)
+        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat, start_ind=start_index))
+        
     elif action == "change_catalog_order":
         categories = MDB.Settings.find_one(dict(id="Catalog"))['catalog']
         # Сортировка словаря по значению поля 'order'
@@ -84,6 +89,10 @@ async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):
     elif action == "save_categories_order":
         MDB.Settings.update_one({"id": "Catalog"}, {"$set": dict(catalog=selected_categories_dict['cats'])})
         await c.answer("✅ Изменения соханены! ✅")
+            
+        categories = GoodsService.GetCategoriesTree()
+
+        await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories, user))
         
     elif action == "cancel_broadcast":
         await state.finish()
