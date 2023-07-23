@@ -87,7 +87,7 @@ class Keyboards:
         return k
 
     @staticmethod
-    def catalog(categories, start_ind=0):
+    def catalog(categories, user, start_ind=0):
         k = IKeyboard(row_width=3)
         k.row(IButton(Texts.SearchButton,
                          callback_data="|Catalog:search:None"))
@@ -99,6 +99,34 @@ class Keyboards:
             k.row()
             k.insert(IButton("⬅️", callback_data=f"|Catalog:root_categories:{start_ind-20}"))
             k.insert(IButton("➡️", callback_data=f"|Catalog:root_categories:{start_ind+20}"))
+        
+        if user['is_admin'] == True:
+            k.row(IButton("Изменить порядок категорий (АДМИН)",
+                             callback_data=f"admin:change_catalog_order"))
+        
+        return k
+    
+    @staticmethod
+    def adminChangeCatalog(categories, user, selected_cat, start_ind=0):
+        k = IKeyboard(row_width=3)
+        k.row(IButton(Texts.SearchButton,
+                         callback_data="|Catalog:search:None"))
+        for catID in list(categories.keys())[start_ind:start_ind+20]:
+            is_selected = "🔘 " if selected_cat == catID else ""
+            if selected_cat == catID:
+                k.row(IButton("⬆️", callback_data=f"admin:move_category_up:{catID}"))
+            k.row(IButton(is_selected+categories[catID]['GroupName'],
+                             callback_data=f"admin:sel_category_for_move:{catID}"))
+            if selected_cat == catID:
+                k.row(IButton("⬇️", callback_data=f"admin:move_category_down:{catID}"))
+            
+        if len(categories) > 20:
+            k.row()
+            k.insert(IButton("⬅️", callback_data=f"|Catalog:root_categories:{start_ind-20}"))
+            k.insert(IButton("➡️", callback_data=f"|Catalog:root_categories:{start_ind+20}"))
+        
+        k.row(IButton("Сохранить",
+                             callback_data=f"admin:save_categories_order"))
         return k
 
     @staticmethod

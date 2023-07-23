@@ -51,7 +51,15 @@ def fillCatalog(catalog, data, head):
 async def catalogTreeSync():
     logger.info(f"[CATALOG]: Start sync tree")
     startTime = time.time()
+    saved_catalog = MDB.Settings.find_one(dict(id="Catalog"))
+    last_saved_order = 0
     data = OneService.getCatalogTree()
+    for x in data:
+        if saved_catalog and x['GroupID'] in saved_catalog['catalog'] and 'order' in saved_catalog['catalog'][x['GroupID']]:
+            x['order'] = saved_catalog['catalog'][x['GroupID']]['order']
+        else:
+            x['order'] = last_saved_order
+            last_saved_order += 1
     data.sort(key=lambda x: x['HeadGroupID'])
     catalog = {}
     fillCatalog(catalog, data, '')

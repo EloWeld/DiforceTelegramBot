@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from typing import Optional, Tuple, Union
 
 import Levenshtein
@@ -21,13 +22,22 @@ class GoodsService:
             return 0
 
     @staticmethod
-    def GetCategoriesTree() -> rdotdict:
+    def GetCategoriesTree(no_rdict=False) -> rdotdict:
         """
         Получает дерево категорий товаров и возвращает его в виде объекта `rdotdict`, содержащего информацию о категориях и подкатегориях.
         """
         result = MDB.Settings.find_one(dict(id="Catalog"))
         result = rdotdict(result['catalog'])
-        return result
+            # Сортировка словаря по значению поля 'order'
+        sorted_items = sorted(result.items(), key=lambda x: x[1].order)
+        
+        # Преобразование отсортированного списка кортежей обратно в словарь
+        sorted_result = OrderedDict(sorted_items)
+        
+        if not no_rdict:
+            sorted_result = rdotdict(sorted_result)
+        
+        return sorted_result
 
     @staticmethod
     def GetCategoryByID(category_id, subgroups=[]) -> Optional[rdotdict]:

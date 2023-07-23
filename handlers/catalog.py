@@ -62,11 +62,12 @@ async def _(m: Message, state: FSMContext):
 
 @dp.message_handler(Text(Texts.CatalogButton), AntiSpam(), ChatTypeFilter(ChatType.PRIVATE), state="*")
 async def _(m: Message, state: FSMContext):
+    user = UserService.Get(m)
     if state:
         await state.finish()
     categories = GoodsService.GetCategoriesTree()
 
-    await m.answer(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
+    await m.answer(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories, user))
 
 
 @dp.message_handler(Text(Texts.CartButton), AntiSpam(), ChatTypeFilter(ChatType.PRIVATE), state="*")

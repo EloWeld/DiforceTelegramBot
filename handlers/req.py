@@ -139,7 +139,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
             await c.answer("Вы в конце каталога")
             return
 
-        await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories, start_index))
+        await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories, user, start_index))
     
     if action in ["see_cat", "see_cat_goods"]:
         catID = action_params[0]
@@ -147,7 +147,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
         cat = GoodsService.GetCategoryByID(catID, categories)
         
         if catID == "":
-            await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
+            await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories, user))
             return
         logger.info(f"See catalog for category {catID}")
 
@@ -326,7 +326,7 @@ async def _(c: CallbackQuery, state: FSMContext=None):
 
     elif action == "main":
         categories = GoodsService.GetCategoriesTree()
-        await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories))
+        await c.message.edit_text(Texts.CatalogMessage, reply_markup=Keyboards.catalog(categories, user))
 
 
 @dp.callback_query_handler(ChatTypeFilter(ChatType.PRIVATE), text_contains="|FilteredGoods:", state="*")

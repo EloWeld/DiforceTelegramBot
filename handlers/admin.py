@@ -1,3 +1,5 @@
+from collections import OrderedDict
+import copy
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, Text
@@ -7,11 +9,15 @@ from etc.filters import Admin
 from handlers.start import prepareUserToPrint
 from loader import MDB, Consts, dp, bot
 from etc.keyboards import Keyboards
+from services.goodsService import GoodsService
 from services.textService import Texts
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from loggerConf import logger
 from services.userService import UserService
 from utils import split_long_text
+
+def swap_order(dict_cats, key1, key2):
+    dict_cats[key1]['order'], dict_cats[key2]['order'] = dict_cats[key2]['order'], dict_cats[key1]['order']
 
 
 class Mailing(StatesGroup):
@@ -19,14 +25,66 @@ class Mailing(StatesGroup):
     links = State()
     confirm = State()
     
-
+selected_categories_dict = {'cats':[]}
 @dp.callback_query_handler(lambda call: call.data.startswith("admin:"), state="*")
 async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):
+    global selected_categories_dict
     action = c.data.split(":")[1]
-
+    user = UserService.Get(c.from_user.id)
+    t1 = "Укажите новый порядок выбрав категорию, а потом переместив её стрелочками"
+    
     if action == "broadcast":
         await c.message.answer(Texts.EnterBroadcastContent, reply_markup=Keyboards.CancelBroadcast())
         await Mailing.content.set()
+        
+        
+    elif action == "sel_category_for_move":
+        selected_cat = c.data.split(":")[2]
+        await state.update_data(selected_cat=selected_cat)
+        
+        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat))
+    elif action == "move_category_up":
+        selected_cat = (await state.get_data()).get('selected_cat', None)
+        # Найдите категорию, которая находится выше
+        previous_cat = None
+        for cat, data in selected_categories_dict['cats'].items():
+            if data['order'] == selected_categories_dict['cats'][selected_cat]['order'] - 1:
+                previous_cat = cat
+                break
+        if previous_cat:
+            swap_order(selected_categories_dict['cats'], selected_cat, previous_cat)
+
+        selected_categories_dict['cats'] = OrderedDict(sorted(selected_categories_dict['cats'].items(), key=lambda x: x[1]['order']))
+        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat))
+
+    elif action == "move_category_down":
+        selected_cat = (await state.get_data()).get('selected_cat', None)
+        # Найдите категорию, которая находится ниже
+        next_cat = None
+        for cat, data in selected_categories_dict['cats'].items():
+            if data['order'] == selected_categories_dict['cats'][selected_cat]['order'] + 1:
+                next_cat = cat
+                break
+        if next_cat:
+            swap_order(selected_categories_dict['cats'], selected_cat, next_cat)
+
+        selected_categories_dict['cats'] = OrderedDict(sorted(selected_categories_dict['cats'].items(), key=lambda x: x[1]['order']))
+        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat))
+    elif action == "change_catalog_order":
+        categories = MDB.Settings.find_one(dict(id="Catalog"))['catalog']
+        # Сортировка словаря по значению поля 'order'
+        sorted_items = sorted(categories.items(), key=lambda x: x[1]['order'])
+        
+        # Преобразование отсортированного списка кортежей обратно в словарь
+        categories = OrderedDict(sorted_items)
+        selected_categories_dict['cats'] = categories
+        selected_cat = (await state.get_data()).get('selected_cat', None)
+        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(categories, user, selected_cat))
+        
+    elif action == "save_categories_order":
+        MDB.Settings.update_one({"id": "Catalog"}, {"$set": dict(catalog=selected_categories_dict['cats'])})
+        await c.answer("✅ Изменения соханены! ✅")
+        
     elif action == "cancel_broadcast":
         await state.finish()
         await c.message.answer(Texts.BroadcastCanceled)
