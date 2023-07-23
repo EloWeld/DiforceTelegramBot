@@ -39,11 +39,13 @@ async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):
         
         
     elif action == "sel_category_for_move":
+        start_index = int(c.data.split(":")[3])
         selected_cat = c.data.split(":")[2]
         await state.update_data(selected_cat=selected_cat)
         
-        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat))
+        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat, start_index))
     elif action == "move_category_up":
+        start_index = int(c.data.split(":")[2])
         selected_cat = (await state.get_data()).get('selected_cat', None)
         # Найдите категорию, которая находится выше
         previous_cat = None
@@ -55,9 +57,10 @@ async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):
             swap_order(selected_categories_dict['cats'], selected_cat, previous_cat)
 
         selected_categories_dict['cats'] = OrderedDict(sorted(selected_categories_dict['cats'].items(), key=lambda x: x[1]['order']))
-        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat))
+        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat, start_index))
 
     elif action == "move_category_down":
+        start_index = int(c.data.split(":")[2])
         selected_cat = (await state.get_data()).get('selected_cat', None)
         # Найдите категорию, которая находится ниже
         next_cat = None
@@ -69,9 +72,9 @@ async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):
             swap_order(selected_categories_dict['cats'], selected_cat, next_cat)
 
         selected_categories_dict['cats'] = OrderedDict(sorted(selected_categories_dict['cats'].items(), key=lambda x: x[1]['order']))
-        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat))
+        await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat, start_index))
     elif action == "change_catalog_order_next":
-        start_index = c.data.split(":")[2]
+        start_index = int(c.data.split(":")[2])
         selected_cat = (await state.get_data()).get('selected_cat', None)
         await c.message.edit_text(t1, reply_markup=Keyboards.adminChangeCatalog(selected_categories_dict['cats'], user, selected_cat, start_ind=start_index))
         

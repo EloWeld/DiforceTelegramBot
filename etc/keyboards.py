@@ -109,16 +109,14 @@ class Keyboards:
     @staticmethod
     def adminChangeCatalog(categories, user, selected_cat, start_ind=0):
         k = IKeyboard(row_width=3)
-        k.row(IButton(Texts.SearchButton,
-                         callback_data="|Catalog:search:None"))
         for catID in list(categories.keys())[start_ind:start_ind+20]:
             is_selected = "🔘 " if selected_cat == catID else ""
             if selected_cat == catID:
-                k.row(IButton("⬆️", callback_data=f"admin:move_category_up:{catID}"))
+                k.row(IButton("⬆️", callback_data=f"admin:move_category_up:{start_ind}"))
             k.row(IButton(is_selected+categories[catID]['GroupName'],
-                             callback_data=f"admin:sel_category_for_move:{catID}"))
+                             callback_data=f"admin:sel_category_for_move:{catID}:{start_ind}"))
             if selected_cat == catID:
-                k.row(IButton("⬇️", callback_data=f"admin:move_category_down:{catID}"))
+                k.row(IButton("⬇️", callback_data=f"admin:move_category_down:{start_ind}"))
             
         if len(categories) > 20:
             k.row()
