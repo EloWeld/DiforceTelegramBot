@@ -49,8 +49,8 @@ async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):
         selected_cat = (await state.get_data()).get('selected_cat', None)
         # Найдите категорию, которая находится выше
         previous_cat = None
-        for cat, data in selected_categories_dict['cats'].items():
-            if data['order'] == selected_categories_dict['cats'][selected_cat]['order'] - 1:
+        for cat, data in list(selected_categories_dict['cats'].items())[::-1]:
+            if data['order'] < selected_categories_dict['cats'][selected_cat]['order']:
                 previous_cat = cat
                 break
         if previous_cat:
@@ -65,7 +65,7 @@ async def process_admin_callback(c: types.CallbackQuery, state: FSMContext):
         # Найдите категорию, которая находится ниже
         next_cat = None
         for cat, data in selected_categories_dict['cats'].items():
-            if data['order'] == selected_categories_dict['cats'][selected_cat]['order'] + 1:
+            if data['order'] > selected_categories_dict['cats'][selected_cat]['order']:
                 next_cat = cat
                 break
         if next_cat:
